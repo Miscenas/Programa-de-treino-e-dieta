@@ -29,8 +29,25 @@ export class EdgeFunctionService {
       console.log('Starting food analysis...');
       console.log('Image data length:', imageData.length);
       
-      const { data, error } = await supabase.functions.invoke('analyze-food', {
-        body: { imageData }
+      // Use generate-plan function which already has image analysis working
+      const { data, error } = await supabase.functions.invoke('generate-plan', {
+        body: { 
+          userProfile: {
+            name: "User",
+            age: 30,
+            gender: "MALE",
+            height: 170,
+            weight: 70,
+            goal: "WEIGHT_LOSS",
+            activityLevel: "moderate",
+            experienceLevel: "beginner",
+            workoutFrequency: 3,
+            workoutDays: ["monday", "wednesday", "friday"],
+            foodPreferences: [],
+            foodRestrictions: []
+          },
+          imageData: imageData
+        }
       })
 
       console.log('Edge Function response:', { data, error });
@@ -43,6 +60,12 @@ export class EdgeFunctionService {
       if (!data?.success) {
         console.error('Edge Function returned error:', data?.error)
         throw new Error(data?.error || 'Failed to analyze food')
+      }
+
+      // Return only the image analysis part
+      if (data.data?.imageAnalysis) {
+        console.log('Analysis successful:', data.data.imageAnalysis);
+        return data.data.imageAnalysis;
       }
 
       console.log('Analysis successful:', data.data);
