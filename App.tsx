@@ -3,7 +3,7 @@ import { Onboarding } from './components/Onboarding';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { UserProfile, FullPlan } from './types';
-import { generatePlan } from './services/expertSystem';
+import { EdgeFunctionService } from './services/edgeFunctionService';
 import { AuthService, AuthUser } from './services/authService';
 
 const App: React.FC = () => {
@@ -88,11 +88,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleOnboardingComplete = (profile: UserProfile) => {
+  const handleOnboardingComplete = async (profile: UserProfile) => {
     setLoading(true);
-    // Simulate complex calculation processing time
-    setTimeout(() => {
-      const generatedPlan = generatePlan(profile);
+    
+    try {
+      // Generate plan using Edge Function (more secure)
+      const generatedPlan = await EdgeFunctionService.generatePlan(profile);
       
       setUser(profile);
       setPlan(generatedPlan);
@@ -101,8 +102,20 @@ const App: React.FC = () => {
       localStorage.setItem('fitcoach_user', JSON.stringify(profile));
       localStorage.setItem('fitcoach_plan', JSON.stringify(generatedPlan));
       
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      // Fallback to local generation if Edge Function fails
+      const { generatePlan } = await import('./services/expertSystem');
+      const fallbackPlan = generatePlan(profile);
+      
+      setUser(profile);
+      setPlan(fallbackPlan);
+
+      localStorage.setItem('fitcoach_user', JSON.stringify(profile));
+      localStorage.setItem('fitcoach_plan', JSON.stringify(fallbackPlan));
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleReset = () => {
