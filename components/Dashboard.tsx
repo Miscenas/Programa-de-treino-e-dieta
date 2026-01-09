@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils } from 'lucide-react';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
 import { GoogleGenAI, Type } from "@google/genai";
+import { NutritionDashboard } from './NutritionDashboard';
 
 interface Props {
   plan: FullPlan;
@@ -140,7 +141,7 @@ const ModernGauge: React.FC<{
 };
 
 export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'workout' | 'diet' | 'shopping' | 'calendar'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'workout' | 'diet' | 'shopping' | 'calendar' | 'nutrition'>('overview');
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(
     plan.workout.weeklySchedule[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.dayName || null
@@ -1791,6 +1792,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
             {activeTab === 'diet' && renderDiet()}
             {activeTab === 'shopping' && renderShopping()}
             {activeTab === 'calendar' && renderCalendar()}
+            {activeTab === 'nutrition' && <NutritionDashboard />}
         </div>
 
         {/* BOTTOM NAV */}
@@ -1799,6 +1801,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                 { id: 'overview', icon: LayoutDashboard, label: 'Resumo' },
                 { id: 'workout', icon: Dumbbell, label: 'Treino' },
                 { id: 'diet', icon: Apple, label: 'Dieta' },
+                { id: 'nutrition', icon: Utensils, label: 'Nutrição IA' },
                 { id: 'calendar', icon: CalendarRange, label: 'Agenda' },
                 { id: 'shopping', icon: ShoppingBasket, label: 'Lista' },
             ].map(tab => {

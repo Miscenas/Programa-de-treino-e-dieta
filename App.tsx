@@ -12,7 +12,6 @@ const App: React.FC = () => {
   const [plan, setPlan] = useState<FullPlan | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'nutrition'>('dashboard');
 
   // Check authentication state
   useEffect(() => {
@@ -141,59 +140,7 @@ const App: React.FC = () => {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  return (
-    <div>
-      {/* Navigation */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">
-                🍽️ FitCoach Pro
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'dashboard'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-700 hover:text-gray-900'
-                }`}
-              >
-                Plano de Treino
-              </button>
-              <button
-                onClick={() => setCurrentView('nutrition')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'nutrition'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-700 hover:text-gray-900'
-                }`}
-              >
-                Nutrição
-              </button>
-              <button
-                onClick={handleReset}
-                className="px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:text-red-900"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="min-h-screen bg-gray-50">
-        {currentView === 'dashboard' ? (
-          <Dashboard user={user} plan={plan} onReset={handleReset} />
-        ) : (
-          <NutritionDashboard />
-        )}
-      </div>
-    </div>
-  );
+  return <Dashboard user={user} plan={plan} onReset={handleReset} />;
 };
 
 export default App;
