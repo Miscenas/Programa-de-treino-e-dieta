@@ -14,10 +14,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== GENERATE-PLAN FUNCTION STARTED ===')
+    console.log('Request method:', req.method)
+    
     const { userProfile, imageData } = await req.json()
+    console.log('Request received - userProfile:', userProfile ? 'YES' : 'NO', 'imageData:', imageData ? 'YES' : 'NO')
 
     // Allow image analysis without userProfile for food analysis only
     if (!imageData) {
+      console.log('Error: No image data provided')
       return new Response(
         JSON.stringify({ error: 'Image data is required' }),
         { 
@@ -28,10 +33,24 @@ serve(async (req) => {
     }
 
     // Initialize Gemini AI with API key from environment variables
-    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY')!)
+    const geminiKey = Deno.env.get('GEMINI_API_KEY')
+    console.log('GEMINI_API_KEY available:', geminiKey ? 'YES' : 'NO')
+    
+    if (!geminiKey) {
+      console.log('Error: GEMINI_API_KEY not found in environment')
+      return new Response(
+        JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    const genAI = new GoogleGenerativeAI(geminiKey)
     
     // Use Gemini Pro Vision for image analysis
-    const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" })
     const textModel = genAI.getGenerativeModel({ model: "gemini-pro" })
 
     let imageAnalysis = null
@@ -39,6 +58,7 @@ serve(async (req) => {
     // Process image if provided
     if (imageData) {
       try {
+        console.log('Processing image data...')
         const imageParts = [
           {
             inlineData: {
@@ -65,23 +85,32 @@ serve(async (req) => {
           }
         `
 
+        console.log('Calling Gemini AI...')
         const imageResult = await visionModel.generateContent([imagePrompt, ...imageParts])
         const imageResponse = await imageResult.response
         const imageText = imageResponse.text()
+        console.log('Gemini response length:', imageText.length)
 
         // Parse image analysis
         try {
           imageAnalysis = JSON.parse(imageText)
+          console.log('Successfully parsed JSON')
         } catch (parseError) {
+          console.log('JSON parse failed, trying regex extraction...')
           const jsonMatch = imageText.match(/\{[\s\S]*\}/)
           if (jsonMatch) {
             imageAnalysis = JSON.parse(jsonMatch[0])
+            console.log('Successfully extracted JSON with regex')
+          } else {
+            console.log('Failed to extract JSON, response was:', imageText)
+            throw new Error('Failed to parse AI response as JSON')
           }
         }
 
         // If only image analysis is requested (no userProfile), return it directly
         if (!userProfile) {
           console.log('Image analysis completed, returning directly')
+          console.log('=== GENERATE-PLAN FUNCTION COMPLETED ===')
           return new Response(
             JSON.stringify({ 
               success: true, 
@@ -197,6 +226,8 @@ serve(async (req) => {
         planData.imageAnalysis = imageAnalysis
       }
 
+      console.log('Plan generation completed')
+      console.log('=== GENERATE-PLAN FUNCTION COMPLETED ===')
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -211,8 +242,22 @@ serve(async (req) => {
       )
     }
 
+    // If we reach here, it means we had userProfile but no imageData, or some other case
+    console.log('Error: Invalid request combination')
+    return new Response(
+      JSON.stringify({ 
+        error: 'Invalid request combination'
+      }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+
   } catch (error) {
+    console.error('=== GENERATE-PLAN FUNCTION ERROR ===')
     console.error('Error generating plan:', error)
+    console.error('Error stack:', error.stack)
     
     return new Response(
       JSON.stringify({ 
