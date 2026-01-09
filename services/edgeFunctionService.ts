@@ -51,6 +51,7 @@ export class EdgeFunctionService {
       })
 
       console.log('Edge Function response:', { data, error });
+      console.log('Response structure:', JSON.stringify(data, null, 2));
 
       if (error) {
         console.error('Food analysis error:', error)
@@ -64,11 +65,12 @@ export class EdgeFunctionService {
 
       // Return only the image analysis part
       if (data.data?.imageAnalysis) {
-        console.log('Analysis successful:', data.data.imageAnalysis);
+        console.log('Found imageAnalysis in response:', data.data.imageAnalysis);
         return data.data.imageAnalysis;
       }
 
-      console.log('Analysis successful:', data.data);
+      console.log('No imageAnalysis found, returning full data');
+      console.log('Full response data:', data.data);
       return data.data
     } catch (error) {
       console.error('Error analyzing food image:', error)

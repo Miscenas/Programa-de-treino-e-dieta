@@ -141,7 +141,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: planData 
+        data: {
+          ...planData,
+          imageAnalysis: imageAnalysis // Include image analysis in response
+        }
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
