@@ -29,29 +29,15 @@ export class EdgeFunctionService {
       console.log('Starting food analysis...');
       console.log('Image data length:', imageData.length);
       
-      // Use generate-plan function which already has image analysis working
+      // Use modified generate-plan function (now supports image-only requests)
       const { data, error } = await supabase.functions.invoke('generate-plan', {
         body: { 
-          userProfile: {
-            name: "User",
-            age: 30,
-            gender: "MALE",
-            height: 170,
-            weight: 70,
-            goal: "WEIGHT_LOSS",
-            activityLevel: "moderate",
-            experienceLevel: "beginner",
-            workoutFrequency: 3,
-            workoutDays: ["monday", "wednesday", "friday"],
-            foodPreferences: [],
-            foodRestrictions: []
-          },
           imageData: imageData
+          // No userProfile needed - just image analysis
         }
       })
 
       console.log('Edge Function response:', { data, error });
-      console.log('Response structure:', JSON.stringify(data, null, 2));
 
       if (error) {
         console.error('Food analysis error:', error)
@@ -63,19 +49,13 @@ export class EdgeFunctionService {
         throw new Error(data?.error || 'Failed to analyze food')
       }
 
-      // Return only the image analysis part
-      if (data.data?.imageAnalysis) {
-        console.log('Found imageAnalysis in response:', data.data.imageAnalysis);
-        return data.data.imageAnalysis;
-      }
-
-      console.log('No imageAnalysis found, returning full data');
-      console.log('Full response data:', data.data);
+      console.log('Analysis successful:', data.data);
       return data.data
+
     } catch (error) {
       console.error('Error analyzing food image:', error)
       
-      // Fallback for testing when Edge Function is not deployed
+      // Fallback for testing when Edge Function is not working
       console.warn('Using fallback food analysis (Edge Function not available)')
       return {
         foods: [

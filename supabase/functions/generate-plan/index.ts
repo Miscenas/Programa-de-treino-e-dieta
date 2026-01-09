@@ -16,9 +16,10 @@ serve(async (req) => {
   try {
     const { userProfile, imageData } = await req.json()
 
-    if (!userProfile) {
+    // Allow image analysis without userProfile for food analysis only
+    if (!userProfile && !imageData) {
       return new Response(
-        JSON.stringify({ error: 'User profile is required' }),
+        JSON.stringify({ error: 'User profile or image data is required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -76,6 +77,20 @@ serve(async (req) => {
           if (jsonMatch) {
             imageAnalysis = JSON.parse(jsonMatch[0])
           }
+        }
+
+        // If only image analysis is requested (no userProfile), return it directly
+        if (!userProfile) {
+          console.log('Image analysis completed, returning directly')
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              data: imageAnalysis 
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
         }
       } catch (imageError) {
         console.error('Error analyzing image:', imageError)
