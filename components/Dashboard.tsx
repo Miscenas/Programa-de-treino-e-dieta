@@ -313,11 +313,11 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
   const handleMealAnalysis = (mealId: string, analysis: MealAnalysis) => {
     setDietHistory(prev => {
       const dayLog = prev[todayKey] || {};
-      const mealLog = [...(dayLog[mealId] || [])];
       
-      // Add analyzed foods to the meal
+      // Replace existing foods with new analyzed foods (don't accumulate)
+      const newMealLog = [];
       analysis.foods.forEach(food => {
-        mealLog.push({
+        newMealLog.push({
           id: `analyzed-${Date.now()}-${Math.random()}`,
           name: food.name,
           calories: food.calories,
@@ -332,12 +332,18 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
       
       return {
         ...prev,
-        [todayKey]: { ...dayLog, [mealId]: mealLog }
+        [todayKey]: { ...dayLog, [mealId]: newMealLog }
       };
     });
     
     // Mark meal as consumed
     toggleMealConsumption(mealId, todayKey);
+    
+    // Also save as selected option for this meal in diet tab
+    setMealSelections(prev => ({
+      ...prev,
+      [`${todayKey}_${mealId}`]: 0 // Select first option (the analyzed one)
+    }));
   };
 
   // Function to open camera modal
