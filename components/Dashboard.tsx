@@ -6,6 +6,7 @@ import { getIngredientCategory } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { NutritionDashboard } from './NutritionDashboard';
+import { MealCameraModal } from './MealCameraModal';
 
 interface Props {
   plan: FullPlan;
@@ -16,6 +17,23 @@ interface Props {
 interface SavedDayInfo {
   isSaved: boolean;
   householdSize: number;
+}
+
+interface MealAnalysis {
+  foods: Array<{
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    portion: string;
+  }>;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+  mealType: string;
+  description: string;
 }
 
 interface FruitAnalysis {
@@ -147,6 +165,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     plan.workout.weeklySchedule[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.dayName || null
   );
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
+  
+  // Camera Modal State
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [selectedMealForCamera, setSelectedMealForCamera] = useState<{id: string, name: string} | null>(null);
   
   // --- DATE & HISTORY STATE ---
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -284,6 +306,45 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     localStorage.setItem('fitcoach_custom_workouts', JSON.stringify(customWorkouts));
   }, [customWorkouts]);
 
+
+  // --- ACTIONS ---
+  
+  // Function to handle meal analysis from camera
+  const handleMealAnalysis = (mealId: string, analysis: MealAnalysis) => {
+    setDietHistory(prev => {
+      const dayLog = prev[todayKey] || {};
+      const mealLog = [...(dayLog[mealId] || [])];
+      
+      // Add analyzed foods to the meal
+      analysis.foods.forEach(food => {
+        mealLog.push({
+          id: `analyzed-${Date.now()}-${Math.random()}`,
+          name: food.name,
+          calories: food.calories,
+          protein: food.protein,
+          carbs: food.carbs,
+          fats: food.fats,
+          fiber: 0,
+          quantity: food.portion,
+          unit: 'porção'
+        });
+      });
+      
+      return {
+        ...prev,
+        [todayKey]: { ...dayLog, [mealId]: mealLog }
+      };
+    });
+    
+    // Mark meal as consumed
+    toggleMealConsumption(mealId, todayKey);
+  };
+
+  // Function to open camera modal
+  const openMealCamera = (mealId: string, mealName: string) => {
+    setSelectedMealForCamera({ id: mealId, name: mealName });
+    setCameraModalOpen(true);
+  };
 
   // --- HELPER: MERGE STATIC AND CUSTOM OPTIONS ---
   const getMealOptions = (meal: Meal): MealOption[] => {
@@ -840,7 +901,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     if (savedDates.length === 0) return [];
 
     savedDates.forEach(dKey => {
-        const savedInfo = savedDays[dKey];
+        const savedInfo = savedDays[dKey] as SavedDayInfo;
         if (!savedInfo || !savedInfo.isSaved) return;
 
         const peopleCount = savedInfo.householdSize;
@@ -860,7 +921,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
             const selectedOption = allOptions[selectedIdx];
 
             if (selectedOption) {
-                selectedOption.ingredients.forEach(ingredient => {
+                (selectedOption.ingredients || []).forEach(ingredient => {
                     const cleanName = ingredient.name.trim();
                     const { value, unit } = parseIngredientAmount(ingredient.amount);
                     const totalValue = value * peopleCount;
@@ -1109,9 +1170,9 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                 <span className="text-xs font-medium text-gray-500">{meal.time}</span>
                                 {/* Botão de Câmera Rápida */}
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); startCamera(meal.id, 'log'); }}
+                                  onClick={(e) => { e.stopPropagation(); openMealCamera(meal.id, meal.name); }}
                                   className="p-1.5 bg-brand-50 text-brand-600 rounded-full hover:bg-brand-100 transition-colors active:scale-95"
-                                  title="Foto da refeição"
+                                  title="Atualizar refeição com foto"
                                 >
                                     <Camera className="w-4 h-4" />
                                 </button>
@@ -1425,12 +1486,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                 {/* Saved Days Pills */}
                 <div className="flex gap-2 overflow-x-auto pb-2">
                     {Object.entries(savedDays).map(([date, info]) => {
-                        if(!info.isSaved) return null;
+                        const savedInfo = info as SavedDayInfo;
+                        if(!savedInfo.isSaved) return null;
                         const d = new Date(date);
                         return (
                             <div key={date} className="flex-shrink-0 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 text-xs">
                                 <span className="font-bold block">{d.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
-                                <span>{d.getDate()}/{d.getMonth()+1} ({info.householdSize}p)</span>
+                                <span>{d.getDate()}/{d.getMonth()+1} ({savedInfo.householdSize}p)</span>
                             </div>
                         )
                     })}
@@ -2190,6 +2252,17 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                     </div>
                 </div>
              </div>
+        )}
+
+        {/* MEAL CAMERA MODAL */}
+        {cameraModalOpen && selectedMealForCamera && (
+          <MealCameraModal
+            isOpen={cameraModalOpen}
+            onClose={() => setCameraModalOpen(false)}
+            mealId={selectedMealForCamera.id}
+            mealName={selectedMealForCamera.name}
+            onFoodAnalyzed={handleMealAnalysis}
+          />
         )}
 
     </div>
