@@ -30,6 +30,7 @@ interface MealCameraModalProps {
 export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnalyzed }: MealCameraModalProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [analyzedData, setAnalyzedData] = useState<FoodAnalysis | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +39,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreview(e.target?.result as string);
+        setAnalyzedData(null); // Reset analysis on new file
       };
       reader.readAsDataURL(file);
     }
@@ -54,15 +56,26 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
         mealType: mealName.toLowerCase()
       };
 
-      onFoodAnalyzed(mealId, analysisWithMealType);
-      onClose();
-      setPreview(null);
+      setAnalyzedData(analysisWithMealType);
     } catch (error) {
       console.error('Error analyzing food:', error);
       alert('Erro ao analisar imagem. Tente novamente.');
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const confirmAnalysis = () => {
+    if (analyzedData) {
+      onFoodAnalyzed(mealId, analyzedData);
+      handleClose();
+    }
+  };
+
+  const handleClose = () => {
+    setPreview(null);
+    setAnalyzedData(null);
+    onClose();
   };
 
   const openCamera = () => {
@@ -79,7 +92,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
             Atualizar {mealName}
           </h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-500 hover:text-gray-700"
           >
             <X className="w-5 h-5" />
@@ -116,39 +129,69 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
               className="w-full h-48 object-cover rounded-lg"
             />
 
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Atenção:</strong> Esta análise irá atualizar as calorias e macros desta refeição no resumo do dia.
-              </p>
-            </div>
+            {analyzedData ? (
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h4 className="font-semibold text-green-800 mb-2">Análise Concluída</h4>
+                <div className="text-sm text-green-700 mb-3 space-y-1">
+                  <p><strong>Alimentos:</strong> {analyzedData.foods.map(f => f.name).join(', ')}</p>
+                  <p><strong>Total:</strong> {analyzedData.totalCalories} kcal</p>
+                </div>
+                <p className="text-sm font-medium text-green-800 mb-4">
+                  Isso atualizará sua refeição e salvará na dieta.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAnalyzedData(null)}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={confirmAnalysis}
+                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Atenção:</strong> Esta análise irá atualizar as calorias e macros desta refeição no resumo do dia.
+                  </p>
+                </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPreview(null)}
-                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4 inline mr-2" />
-                Refazer
-              </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPreview(null)}
+                    className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    <X className="w-4 h-4 inline mr-2" />
+                    Refazer
+                  </button>
 
-              <button
-                onClick={analyzeImage}
-                disabled={isAnalyzing}
-                className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 inline mr-2 animate-spin" />
-                    Analisando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 inline mr-2" />
-                    Atualizar Refeição
-                  </>
-                )}
-              </button>
-            </div>
+                  <button
+                    onClick={analyzeImage}
+                    disabled={isAnalyzing}
+                    className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 inline mr-2 animate-spin" />
+                        Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 inline mr-2" />
+                        Analisar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
