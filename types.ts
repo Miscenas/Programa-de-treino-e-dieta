@@ -127,3 +127,61 @@ export interface FoodItem {
   portion: string;
   category: 'meal' | 'snack' | 'drink' | 'junk';
 }
+
+// Supabase database types
+export interface Profile {
+  id: string;
+  email: string;
+  name: string;
+  age?: number;
+  gender?: Gender;
+  height?: number;
+  weight?: number;
+  goal?: Goal;
+  activity_level?: ActivityLevel;
+  experience_level?: ExperienceLevel;
+  workout_frequency?: number;
+  workout_days?: number[];
+  workout_split?: WorkoutSplit;
+  food_preferences?: string[];
+  food_restrictions?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPlan {
+  id: string;
+  user_id: string;
+  nutrition_plan: NutritionPlan;
+  workout_plan: WorkoutPlan;
+  generated_at: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkoutRecord {
+  id: string;
+  user_id: string;
+  session_date: string;
+  workout_session: WorkoutSession;
+  completed: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NutritionRecord {
+  id: string;
+  user_id: string;
+  record_date: string;
+  meals_consumed: Meal[];
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  water_intake: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
