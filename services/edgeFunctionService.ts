@@ -23,4 +23,26 @@ export class EdgeFunctionService {
       throw error
     }
   }
+
+  static async analyzeFoodImage(imageData: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-food', {
+        body: { imageData }
+      })
+
+      if (error) {
+        console.error('Food analysis error:', error)
+        throw new Error(`Failed to analyze food: ${error.message}`)
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to analyze food')
+      }
+
+      return data.data
+    } catch (error) {
+      console.error('Error analyzing food image:', error)
+      throw error
+    }
+  }
 }

@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenerativeAI } from "npm:@google/generative-ai"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 }
 
 serve(async (req) => {
@@ -13,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userProfile } = await req.json()
+    const { userProfile, imageData } = await req.json()
 
     if (!userProfile) {
       return new Response(
@@ -27,7 +28,60 @@ serve(async (req) => {
 
     // Initialize Gemini AI with API key from environment variables
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY')!)
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+    
+    // Use Gemini Pro Vision for image analysis
+    const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const textModel = genAI.getGenerativeModel({ model: "gemini-pro" })
+
+    let imageAnalysis = null
+
+    // Process image if provided
+    if (imageData) {
+      try {
+        const imageParts = [
+          {
+            inlineData: {
+              data: imageData.split(',')[1], // Remove data:image/...;base64, prefix
+              mimeType: imageData.split(';')[0].split(':')[1] // Extract MIME type
+            }
+          }
+        ]
+
+        const imagePrompt = `
+          Analise esta imagem de comida e identifique:
+          1. Todos os alimentos visíveis
+          2. Estimativa de calorias totais
+          3. Macronutrientes aproximados (proteínas, carboidratos, gorduras)
+          4. Porções estimadas
+          
+          Responda em formato JSON com a estrutura:
+          {
+            "foods": [{"name": "nome", "calories": 123, "protein": 10, "carbs": 20, "fats": 5, "portion": "1 xícara"}],
+            "totalCalories": 450,
+            "totalProtein": 25,
+            "totalCarbs": 35,
+            "totalFats": 15
+          }
+        `
+
+        const imageResult = await visionModel.generateContent([imagePrompt, ...imageParts])
+        const imageResponse = await imageResult.response
+        const imageText = imageResponse.text()
+
+        // Parse image analysis
+        try {
+          imageAnalysis = JSON.parse(imageText)
+        } catch (parseError) {
+          const jsonMatch = imageText.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            imageAnalysis = JSON.parse(jsonMatch[0])
+          }
+        }
+      } catch (imageError) {
+        console.error('Error analyzing image:', imageError)
+        // Continue without image analysis if it fails
+      }
+    }
 
     // Create prompt for generating personalized fitness plan
     const prompt = `
@@ -47,6 +101,13 @@ serve(async (req) => {
       - Preferências alimentares: ${userProfile.foodPreferences?.join(', ') || 'Nenhuma'}
       - Restrições alimentares: ${userProfile.foodRestrictions?.join(', ') || 'Nenhuma'}
 
+      ${imageAnalysis ? `
+      Análise da imagem fornecida:
+      - Alimentos identificados: ${imageAnalysis.foods?.map(f => f.name).join(', ') || 'Nenhum'}
+      - Calorias totais na imagem: ${imageAnalysis.totalCalories || 0}
+      - Macronutrientes: Proteínnas ${imageAnalysis.totalProtein || 0}g, Carboidratos ${imageAnalysis.totalCarbs || 0}g, Gorduras ${imageAnalysis.totalFats || 0}g
+      ` : ''}
+
       Gere um plano completo em formato JSON com:
       1. Plano nutricional (calorias diárias, distribuição de macronutrientes, refeições)
       2. Plano de treino (divisão, exercícios, séries, repetições, descanso)
@@ -54,22 +115,27 @@ serve(async (req) => {
       Responda APENAS com o JSON válido, sem texto adicional.
     `
 
-    const result = await model.generateContent(prompt)
+    const result = await textModel.generateContent(prompt)
     const response = await result.response
     const text = response.text()
 
-    // Try to parse the response as JSON
+    // Try to parse response as JSON
     let planData
     try {
       planData = JSON.parse(text)
     } catch (parseError) {
-      // If direct parsing fails, try to extract JSON from the response
+      // If direct parsing fails, try to extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         planData = JSON.parse(jsonMatch[0])
       } else {
         throw new Error('Failed to parse AI response as JSON')
       }
+    }
+
+    // Add image analysis to the response if available
+    if (imageAnalysis) {
+      planData.imageAnalysis = imageAnalysis
     }
 
     return new Response(
