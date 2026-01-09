@@ -26,9 +26,14 @@ export class EdgeFunctionService {
 
   static async analyzeFoodImage(imageData: string): Promise<any> {
     try {
+      console.log('Starting food analysis...');
+      console.log('Image data length:', imageData.length);
+      
       const { data, error } = await supabase.functions.invoke('analyze-food', {
         body: { imageData }
       })
+
+      console.log('Edge Function response:', { data, error });
 
       if (error) {
         console.error('Food analysis error:', error)
@@ -36,9 +41,11 @@ export class EdgeFunctionService {
       }
 
       if (!data?.success) {
+        console.error('Edge Function returned error:', data?.error)
         throw new Error(data?.error || 'Failed to analyze food')
       }
 
+      console.log('Analysis successful:', data.data);
       return data.data
     } catch (error) {
       console.error('Error analyzing food image:', error)
