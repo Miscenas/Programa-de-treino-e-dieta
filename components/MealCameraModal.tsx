@@ -90,13 +90,12 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
             <Camera className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 mb-4">
-              Tire uma foto da sua refeição para atualizar as calorias
+              Tire uma foto ou escolha uma imagem da sua refeição para atualizar as calorias
             </p>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -105,7 +104,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
               className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
             >
               <Camera className="w-4 h-4 inline mr-2" />
-              Tirar Foto
+              Escolher Foto
             </button>
           </div>
         ) : (
