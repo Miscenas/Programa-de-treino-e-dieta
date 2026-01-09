@@ -1,0 +1,7 @@
+{
+  "name": "FitCoach Pro",
+  "description": "Seu treinador e nutricionista de bolso. Um app mobile-first que gera planos de treino e dieta baseados em regras comprovadas de fisiologia.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
