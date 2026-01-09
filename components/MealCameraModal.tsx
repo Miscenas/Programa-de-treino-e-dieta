@@ -53,7 +53,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
         ...analysis,
         mealType: mealName.toLowerCase()
       };
-      
+
       onFoodAnalyzed(mealId, analysisWithMealType);
       onClose();
       setPreview(null);
@@ -96,6 +96,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -114,13 +115,13 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
               alt="Preview"
               className="w-full h-48 object-cover rounded-lg"
             />
-            
+
             <div className="bg-blue-50 p-3 rounded-lg">
               <p className="text-sm text-blue-800">
                 <strong>Atenção:</strong> Esta análise irá atualizar as calorias e macros desta refeição no resumo do dia.
               </p>
             </div>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={() => setPreview(null)}
@@ -129,7 +130,7 @@ export function MealCameraModal({ isOpen, onClose, mealId, mealName, onFoodAnaly
                 <X className="w-4 h-4 inline mr-2" />
                 Refazer
               </button>
-              
+
               <button
                 onClick={analyzeImage}
                 disabled={isAnalyzing}
