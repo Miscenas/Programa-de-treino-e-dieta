@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     console.log('=== ANALYZE-FOOD-SIMPLE FUNCTION STARTED ===')
     console.log('Request method:', req.method)
-    
+
     const { imageData } = await req.json()
     console.log('Image data received:', imageData ? 'YES' : 'NO')
 
@@ -24,9 +24,9 @@ serve(async (req) => {
       console.log('Error: No image data provided')
       return new Response(
         JSON.stringify({ error: 'Image data is required' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
@@ -34,14 +34,14 @@ serve(async (req) => {
     // Check if GEMINI_API_KEY is available
     const geminiKey = Deno.env.get('GEMINI_API_KEY')
     console.log('GEMINI_API_KEY available:', geminiKey ? 'YES' : 'NO')
-    
+
     if (!geminiKey) {
       console.log('Error: GEMINI_API_KEY not found in environment')
       return new Response(
         JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       )
     }
@@ -68,24 +68,27 @@ serve(async (req) => {
     ]
 
     const prompt = `
-      Analise esta imagem de comida e responda em JSON:
+      Analise esta imagem de comida e responda em JSON.
+      IMPORTANTE: Todos os campos de texto (name, portion, description, mealType) DEVEM obrigatoriamente estar em Português do Brasil (PT-BR). Mesmo que o alimento seja internacional, use o nome comum em português.
+
+      Exemplo de formato esperado:
       {
         "foods": [
           {
-            "name": "nome do alimento",
-            "calories": 123,
-            "protein": 10,
-            "carbs": 20,
+            "name": "Ovo Cozido",
+            "calories": 78,
+            "protein": 6,
+            "carbs": 0.6,
             "fats": 5,
-            "portion": "1 xícara ou 100g"
+            "portion": "1 unidade"
           }
         ],
-        "totalCalories": 450,
-        "totalProtein": 25,
-        "totalCarbs": 35,
-        "totalFats": 15,
+        "totalCalories": 78,
+        "totalProtein": 6,
+        "totalCarbs": 0.6,
+        "totalFats": 5,
         "mealType": "café da manhã",
-        "description": "descrição do que você vê"
+        "description": "Um ovo cozido inteiro com gema firme."
       }
       
       Seja específico nas porções e valores nutricionais.
@@ -118,12 +121,12 @@ serve(async (req) => {
     console.log('Analysis completed successfully')
     console.log('=== ANALYZE-FOOD-SIMPLE FUNCTION COMPLETED ===')
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: analysis 
+      JSON.stringify({
+        success: true,
+        data: analysis
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
@@ -132,13 +135,13 @@ serve(async (req) => {
     console.error('Error analyzing food:', error)
     console.error('Error stack:', error.stack)
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to analyze food',
-        details: error.message 
+        details: error.message
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
   }

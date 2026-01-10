@@ -58,6 +58,12 @@ export interface MealOption {
   name: string; // ex: "Opção Clássica"
   description: string;
   ingredients: Ingredient[]; // Lista exata de ingredientes com quantidades
+  calories?: number;
+  macros?: {
+    protein: number;
+    carbs: number;
+    fats: number;
+  };
 }
 
 export interface Meal {
@@ -85,9 +91,9 @@ export interface Exercise {
   name: string;
   sets: number;
   reps: string;
-  rest: string; 
-  method?: string; 
-  notes?: string; 
+  rest: string;
+  method?: string;
+  notes?: string;
 }
 
 export interface WorkoutSession {
@@ -108,7 +114,7 @@ export interface NutritionPlan {
 
 export interface WorkoutPlan {
   weeklySchedule: WorkoutSession[];
-  methodology: string; 
+  methodology: string;
 }
 
 export interface FullPlan {
