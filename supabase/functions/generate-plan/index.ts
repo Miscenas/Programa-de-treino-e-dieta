@@ -37,6 +37,10 @@ serve(async (req) => {
 
       REQUISITOS TÉCNICOS:
       1. DIETA: Forneça Exatamente 4 refeições diárias (Café, Almoço, Lanche, Jantar).
+         - CULTURA: Priorize opções tradicionais brasileiras. 
+         - No Café da Manhã, inclua sempre uma opção com 'Pão com Ovo/Manteiga e Café'.
+         - No Almoço e Jantar, inclua sempre uma opção de 'PF Tradicional' (Arroz, Feijão, Proteína e Salada).
+         - No Lanche, inclua opções práticas como Frutas, Iogurte ou Sanduíche natural.
       2. OPÇÕES: Dentro de cada refeição ("meals"), forneça 3 OPÇÕES ("options") diferentes para o usuário escolher.
       3. TREINO: Crie um cronograma semanal ("weeklySchedule") com foco nos objetivos do usuário.
       
