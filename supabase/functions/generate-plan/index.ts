@@ -37,11 +37,12 @@ serve(async (req) => {
 
       REQUISITOS TÉCNICOS:
       1. DIETA: Forneça Exatamente 4 refeições diárias (Café, Almoço, Lanche, Jantar).
-         - CULTURA: Priorize opções tradicionais brasileiras. 
-         - No Café da Manhã, inclua sempre uma opção com 'Pão com Ovo/Manteiga e Café'.
-         - No Almoço e Jantar, inclua sempre uma opção de 'PF Tradicional' (Arroz, Feijão, Proteína e Salada).
-         - No Lanche, inclua opções práticas como Frutas, Iogurte ou Sanduíche natural.
-      2. OPÇÕES: Dentro de cada refeição ("meals"), forneça 3 OPÇÕES ("options") diferentes para o usuário escolher.
+         - CULTURA: Priorize opções tradicionais brasileiras com VARIEDADE. 
+         - No Café da Manhã: Sempre inclua 'Pão com Ovo/Manteiga e Café', mas varie as outras opções (tapioca, panqueca de aveia, omelete, etc).
+         - No Almoço e Jantar: Sempre inclua 'PF Tradicional' (Arroz, Feijão, Proteína e Salada), mas varie as proteínas (frango, carne, peixe, ovo) e adicione opções como 'Sanduíche Natural de Carne Grelhada com Alface e Tomate' ou 'Wrap de Frango'.
+         - No Lanche: Varie entre Frutas, Iogurte natural, Sanduíche natural (carne sem processamento), Pasta de amendoim com banana, Mix de castanhas.
+         - IMPORTANTE: Evite alimentos ultraprocessados. Prefira carnes grelhadas, assadas ou cozidas ao invés de embutidos.
+      2. OPÇÕES: Dentro de cada refeição ("meals"), forneça 3 OPÇÕES ("options") VARIADAS e diferentes para o usuário escolher.
       3. TREINO: Crie um cronograma semanal ("weeklySchedule") com foco nos objetivos do usuário.
       
       RESPONDA APENAS EM JSON PURO seguindo exatamente esta estrutura:
