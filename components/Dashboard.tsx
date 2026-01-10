@@ -1,17 +1,19 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser } from 'lucide-react';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { NutritionDashboard } from './NutritionDashboard';
 import { MealCameraModal } from './MealCameraModal';
+import { EdgeFunctionService } from '../services/edgeFunctionService';
 
 interface Props {
     plan: FullPlan;
     user: UserProfile;
     onReset: () => void;
+    onUpdatePlan: (plan: FullPlan) => void;
 }
 
 interface SavedDayInfo {
@@ -158,11 +160,11 @@ const ModernGauge: React.FC<{
     );
 };
 
-export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
+export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'workout' | 'diet' | 'shopping' | 'calendar' | 'progress'>('overview');
     const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
     const [expandedDay, setExpandedDay] = useState<string | null>(
-        plan.workout.weeklySchedule[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.dayName || null
+        plan.workout?.weeklySchedule?.[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.dayName || null
     );
     const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
 
@@ -208,6 +210,18 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     const [weightHistory, setWeightHistory] = useState<Record<string, number>>({});
     const [bodyFatHistory, setBodyFatHistory] = useState<Record<string, number>>({});
     const [waistHistory, setWaistHistory] = useState<Record<string, number>>({});
+
+    // Smart Plan Import states
+    const [isSmartImportModalOpen, setIsSmartImportModalOpen] = useState(false);
+    const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'review'>('idle');
+    const [importedPlan, setImportedPlan] = useState<FullPlan | null>(null);
+    const [backupPlan, setBackupPlan] = useState<FullPlan | null>(null);
+    const [backupSelections, setBackupSelections] = useState<Record<string, number>>({});
+    const [importError, setImportError] = useState<string | null>(null);
+    const [importType, setImportType] = useState<'image' | 'text'>('image');
+    const [importDistributeByDays, setImportDistributeByDays] = useState<boolean>(true);
+    const [importDietSelected, setImportDietSelected] = useState(true);
+    const [importWorkoutSelected, setImportWorkoutSelected] = useState(true);
 
     // Modal for adding measurements
     const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
@@ -255,16 +269,41 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     });
 
     const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-    const todayWorkout = plan.workout.weeklySchedule[todayIndex] || plan.workout.weeklySchedule[0];
+    const todayWorkout = plan.workout?.weeklySchedule?.[todayIndex] || plan.workout?.weeklySchedule?.[0] || { focus: "Descanso", exercises: [] };
 
     // Helpers
-    const getDateKey = (date: Date) => date.toISOString().split('T')[0];
+    const getDateKey = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
     const todayKey = getDateKey(new Date());
     const selectedDateKey = getDateKey(selectedDate);
 
     const getMealOptions = (meal: Meal): MealOption[] => {
         const custom = customOptions[meal.id] || [];
-        return [...meal.options, ...custom];
+        return [...(meal.options || []), ...custom];
+    };
+
+    const getOptionIndexForDate = (options: MealOption[], dateKey: string) => {
+        if (options.length === 0) return 0;
+
+        const date = new Date(dateKey + 'T12:00:00');
+        const dayOfWeek = date.getDay(); // 0-Sun, 1-Mon...
+        const dayName = date.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+        const shortDayName = date.toLocaleDateString('pt-BR', { weekday: 'short' }).toLowerCase().replace('.', '');
+
+        // 1. Try name match
+        const nameMatchIndex = options.findIndex(opt => {
+            const lowName = opt.name.toLowerCase();
+            return lowName.includes(dayName) || lowName.includes(shortDayName);
+        });
+        if (nameMatchIndex !== -1) return nameMatchIndex;
+
+        // 2. Fallback to Monday-based index (0-Mon, 6-Sun)
+        const mondayBasedIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        return mondayBasedIndex % options.length;
     };
 
     const parseIngredientAmount = (amountStr: string) => {
@@ -342,14 +381,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         const allOptions = getMealOptions(meal);
 
         if (optionIndex === undefined) {
-            const dayOfWeek = new Date(dateKey + 'T12:00:00').getDay();
-            optionIndex = dayOfWeek % allOptions.length;
+            optionIndex = getOptionIndexForDate(allOptions, dateKey);
         }
 
         const selectedOption = allOptions[optionIndex];
-        if (!selectedOption) return meal.calories;
+        if (!selectedOption) return meal.calories || 0;
 
-        let totalCalories = selectedOption.calories || meal.calories;
+        let totalCalories = selectedOption.calories || meal.calories || 0;
 
         // Deduct Excluded Ingredients
         const excludedIndices = excludedIngredients[selectionKey] || [];
@@ -402,6 +440,12 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         const savedCustomWorkouts = localStorage.getItem('fitcoach_custom_workouts');
         if (savedCustomWorkouts) setCustomWorkouts(JSON.parse(savedCustomWorkouts));
 
+        const savedBackup = localStorage.getItem('fitcoach_backup_plan');
+        if (savedBackup) setBackupPlan(JSON.parse(savedBackup));
+
+        const savedBackupSels = localStorage.getItem('fitcoach_backup_selections');
+        if (savedBackupSels) setBackupSelections(JSON.parse(savedBackupSels));
+
     }, []);
 
     // Save to localStorage
@@ -412,6 +456,18 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     useEffect(() => {
         localStorage.setItem('fitcoach_history', JSON.stringify(dietHistory));
     }, [dietHistory]);
+
+    useEffect(() => {
+        if (backupPlan) {
+            localStorage.setItem('fitcoach_backup_plan', JSON.stringify(backupPlan));
+        } else {
+            localStorage.removeItem('fitcoach_backup_plan');
+        }
+    }, [backupPlan]);
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_backup_selections', JSON.stringify(backupSelections));
+    }, [backupSelections]);
 
     useEffect(() => {
         localStorage.setItem('fitcoach_custom_options', JSON.stringify(customOptions));
@@ -537,7 +593,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                 if (existingDay) {
                     exercisesList = [...existingDay];
                 } else {
-                    const originalSession = plan.workout.weeklySchedule.find(s => s.dayName === currentDayForAddExercise);
+                    const originalSession = (plan.workout?.weeklySchedule || []).find(s => s.dayName === currentDayForAddExercise);
                     exercisesList = originalSession ? [...originalSession.exercises] : [];
                 }
 
@@ -560,7 +616,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
             if (existingDay) {
                 exercisesList = [...existingDay];
             } else {
-                const originalSession = plan.workout.weeklySchedule.find(s => s.dayName === dayName);
+                const originalSession = (plan.workout?.weeklySchedule || []).find(s => s.dayName === dayName);
                 exercisesList = originalSession ? [...originalSession.exercises] : [];
             }
 
@@ -587,7 +643,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         const dayLog = dietHistory[dateKey] || {};
         let total = 0;
 
-        plan.nutrition.meals.forEach(meal => {
+        (plan.nutrition?.meals || []).forEach(meal => {
             const isConsumed = consumedMeals.has(`${dateKey}_${meal.id}`);
 
             if (onlyConsumed && !isConsumed) {
@@ -605,10 +661,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         const consumed = { protein: 0, carbs: 0, fats: 0 };
         const dayLog = dietHistory[dateKey] || {};
 
-        plan.nutrition.meals.forEach(meal => {
-            targets.protein += meal.macros.protein;
-            targets.carbs += meal.macros.carbs;
-            targets.fats += meal.macros.fats;
+        (plan.nutrition?.meals || []).forEach(meal => {
+            targets.protein += meal.macros?.protein || 0;
+            targets.carbs += meal.macros?.carbs || 0;
+            targets.fats += meal.macros?.fats || 0;
 
             if (consumedMeals.has(`${dateKey}_${meal.id}`)) {
                 const logged = dayLog[meal.id];
@@ -624,22 +680,22 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                     const optionIndex = mealSelections[`${dateKey}_${meal.id}`] || 0;
 
                     if (optionIndex === 0) {
-                        consumed.protein += meal.macros.protein;
-                        consumed.carbs += meal.macros.carbs;
-                        consumed.fats += meal.macros.fats;
+                        consumed.protein += meal.macros?.protein || 0;
+                        consumed.carbs += meal.macros?.carbs || 0;
+                        consumed.fats += meal.macros?.fats || 0;
                     } else {
                         const allOptions = getMealOptions(meal);
                         const selectedOption = allOptions[optionIndex];
 
                         if (selectedOption && selectedOption.macros) {
-                            consumed.protein += selectedOption.macros.protein;
-                            consumed.carbs += selectedOption.macros.carbs;
-                            consumed.fats += selectedOption.macros.fats;
+                            consumed.protein += selectedOption.macros.protein || 0;
+                            consumed.carbs += selectedOption.macros.carbs || 0;
+                            consumed.fats += selectedOption.macros.fats || 0;
                         } else {
                             // Fallback
-                            consumed.protein += meal.macros.protein;
-                            consumed.carbs += meal.macros.carbs;
-                            consumed.fats += meal.macros.fats;
+                            consumed.protein += meal.macros?.protein || 0;
+                            consumed.carbs += meal.macros?.carbs || 0;
+                            consumed.fats += meal.macros?.fats || 0;
                         }
                     }
                 }
@@ -678,7 +734,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
     const selectedDayPlannedCalories = getCaloriesForDate(selectedDateKey, false);
     const todayConsumedCalories = getCaloriesForDate(todayKey, true);
     const weeklyWorkoutsDone = getWeeklyWorkoutCount();
-    const weeklyFrequencyTarget = user.workoutFrequency;
+    const weeklyFrequencyTarget = user.workoutFrequency || 3;
     const todayMacros = getDailyMacros(todayKey);
 
     // --- ACTIONS ---
@@ -1459,7 +1515,27 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         const isWorkoutDoneToday = workoutLog.has(todayKey);
 
         return (
-            <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="space-y-6 animate-in fade-in duration-300 pb-20">
+                {/* UNDO BUTTON IN OVERVIEW */}
+                {backupPlan && (
+                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between shadow-sm border-l-4 border-l-orange-500">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-orange-100 p-2 rounded-full">
+                                <RefreshCw className="w-5 h-5 text-orange-600 animate-spin-slow" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-orange-900">Plano Alternativo Ativo</h4>
+                                <p className="text-[10px] text-orange-700">Você pode voltar ao plano original a qualquer momento.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={undoImport}
+                            className="bg-white text-orange-700 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm border border-orange-100 active:scale-95 transition-all"
+                        >
+                            Restaurar
+                        </button>
+                    </div>
+                )}
 
                 {/* HEADER GAUGES */}
                 <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
@@ -1469,7 +1545,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         {/* GAUGE CALORIAS */}
                         <ModernGauge
                             value={todayConsumedCalories}
-                            max={plan.nutrition.targetCalories}
+                            max={plan.nutrition?.targetCalories || 2000}
                             type="calories"
                             label="Calorias (Hoje)"
                             suffix="kcal"
@@ -1597,10 +1673,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                 // Encontrar a refeição mais próxima do horário atual
                                 const now = new Date();
                                 const currentHour = now.getHours();
-                                let closestMeal = plan.nutrition.meals[0];
+                                let closestMeal = (plan.nutrition?.meals || [])[0];
                                 let minDiff = 24;
 
-                                plan.nutrition.meals.forEach(m => {
+                                (plan.nutrition?.meals || []).forEach(m => {
                                     const mealHour = parseInt(m.time);
                                     const diff = Math.abs(currentHour - mealHour);
                                     if (diff < minDiff) {
@@ -1608,7 +1684,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                         closestMeal = m;
                                     }
                                 });
-                                startCamera(closestMeal.id, 'log');
+                                if (closestMeal) startCamera(closestMeal.id, 'log');
                             }}
                             className="relative w-full bg-white border border-brand-100 p-4 rounded-xl shadow-md flex items-center justify-between hover:border-brand-300 transition-all active:scale-[0.98]"
                         >
@@ -1637,7 +1713,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         </div>
 
                         <div className="space-y-3">
-                            {plan.nutrition.meals.map((meal) => {
+                            {(plan.nutrition?.meals || []).map((meal) => {
                                 const isConsumed = consumedMeals.has(`${todayKey}_${meal.id}`);
                                 return (
                                     <div key={meal.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors">
@@ -1683,13 +1759,47 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
 
     const renderWorkout = () => (
         <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {/* UNDO BUTTON */}
+            {backupPlan && (
+                <div className="bg-brand-50 border border-brand-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 text-brand-600 animate-spin-slow" />
+                        <span className="text-xs font-bold text-brand-800">Você está usando um plano importado</span>
+                    </div>
+                    <button
+                        onClick={undoImport}
+                        className="text-[10px] font-black uppercase text-brand-700 hover:text-brand-900 bg-white px-3 py-1.5 rounded-lg border border-brand-100 shadow-sm transition-all active:scale-95"
+                    >
+                        Restaurar Sistema
+                    </button>
+                </div>
+            )}
+            {/* GLOBAL IMPORT BUTTON */}
+            <div className="bg-gradient-to-br from-indigo-600 to-brand-600 p-4 rounded-2xl shadow-lg shadow-brand-100 flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                        <BookOpen className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-bold text-sm">Plano do Personal?</h3>
+                        <p className="text-indigo-100 text-[10px]">Importe via foto ou texto usando IA</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setIsSmartImportModalOpen(true)}
+                    className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-indigo-50"
+                >
+                    Importar AI
+                </button>
+            </div>
+
             {/* List of workout days */}
-            {plan.workout.weeklySchedule.map((session, index) => {
+            {(plan.workout?.weeklySchedule || []).map((session, index) => {
                 const isExpanded = expandedDay === session.dayName;
-                const isToday = session.dayName === plan.workout.weeklySchedule[todayIndex].dayName;
+                const isToday = plan.workout?.weeklySchedule && session.dayName === plan.workout.weeklySchedule[todayIndex]?.dayName;
 
                 // Use customized list if available, otherwise default
-                const displayExercises = customWorkouts[session.dayName] || session.exercises;
+                const displayExercises = customWorkouts[session.dayName] || session.exercises || [];
                 const isCustomized = !!customWorkouts[session.dayName];
 
                 return (
@@ -1776,6 +1886,41 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         return (
             <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
+                {/* UNDO BUTTON */}
+                {backupPlan && (
+                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 text-orange-600 animate-spin-slow" />
+                            <span className="text-xs font-bold text-orange-800">Você está usando uma dieta importada</span>
+                        </div>
+                        <button
+                            onClick={undoImport}
+                            className="text-[10px] font-black uppercase text-orange-700 hover:text-orange-900 bg-white px-3 py-1.5 rounded-lg border border-orange-100 shadow-sm transition-all active:scale-95"
+                        >
+                            Restaurar Sistema
+                        </button>
+                    </div>
+                )}
+
+                {/* GLOBAL IMPORT BUTTON */}
+                <div className="bg-gradient-to-br from-orange-500 to-rose-500 p-4 rounded-2xl shadow-lg shadow-orange-100 flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                            <Utensils className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-bold text-sm">Plano da Nutri?</h3>
+                            <p className="text-orange-100 text-[10px]">Tire uma foto e a IA monta sua dieta</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsSmartImportModalOpen(true)}
+                        className="bg-white text-orange-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-orange-50"
+                    >
+                        Importar AI
+                    </button>
+                </div>
+
                 {/* Date Navigator */}
                 <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm sticky top-0 z-10">
                     <button onClick={() => {
@@ -1810,7 +1955,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                     <div className="flex justify-between items-center mb-2">
                         <h3 className="font-bold text-brand-900">Meta Diária</h3>
                         <span className="text-xs font-bold bg-white text-brand-700 px-2 py-1 rounded shadow-sm">
-                            {selectedDayPlannedCalories} / {plan.nutrition.targetCalories} kcal
+                            {selectedDayPlannedCalories} / {plan.nutrition?.targetCalories || 2000} kcal
                         </span>
                     </div>
                     {/* Save Day Button */}
@@ -1835,7 +1980,21 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
 
                 {/* Meals List */}
                 <div className="space-y-4">
-                    {plan.nutrition.meals.map(meal => {
+                    {(!plan.nutrition?.meals || plan.nutrition.meals.length === 0) && (
+                        <div className="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center">
+                            <Utensils className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                            <p className="text-gray-500 font-medium italic">Nenhuma refeição encontrada neste plano.</p>
+                            {backupPlan && (
+                                <button
+                                    onClick={undoImport}
+                                    className="mt-4 px-6 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md"
+                                >
+                                    Clique para Restaurar Plano Anterior
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {(plan.nutrition?.meals || []).map(meal => {
                         const selectionKey = `${selectedDateKey}_${meal.id}`;
 
                         // --- AUTO ROTATION LOGIC ---
@@ -1843,15 +2002,14 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         const options = getMealOptions(meal);
 
                         if (selectedOptionIndex === undefined) {
-                            const dayOfWeek = new Date(selectedDateKey + 'T12:00:00').getDay();
-                            selectedOptionIndex = dayOfWeek % options.length;
+                            selectedOptionIndex = getOptionIndexForDate(options, selectedDateKey);
                         }
 
                         const selectedOption = options[selectedOptionIndex];
 
                         // Check if customized items exist for this day/meal
                         const customItems = dietHistory[selectedDateKey]?.[meal.id];
-                        const displayItems = customItems || selectedOption.ingredients;
+                        const displayItems = customItems || selectedOption?.ingredients || [];
 
                         const isExpanded = expandedMeal === meal.id;
 
@@ -1887,7 +2045,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                                     <option key={opt.id} value={idx}>{opt.name}</option>
                                                 ))}
                                             </select>
-                                            <p className="text-xs text-gray-500 mt-1 italic">{selectedOption.description}</p>
+                                            <p className="text-xs text-gray-500 mt-1 italic">{selectedOption?.description || ""}</p>
                                         </div>
 
                                         {/* Ingredients List */}
@@ -1936,7 +2094,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                         </div>
 
                                         {/* Delete Custom Option Button (if selected is custom) */}
-                                        {String(selectedOption.id).startsWith('custom-') && (
+                                        {selectedOption && String(selectedOption.id).startsWith('custom-') && (
                                             <button
                                                 onClick={(e) => handleDeleteOption(meal.id, selectedOption.id, e)}
                                                 className="mt-2 w-full text-xs text-red-500 underline flex items-center justify-center gap-1"
@@ -2149,8 +2307,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
 
         // Logic to get workout details for the SELECTED date (below legend)
         const selectedDayOfWeek = selectedDate.getDay();
-        const selectedWorkoutSession = plan.workout.weeklySchedule[selectedDayOfWeek];
-        const selectedWorkoutExercises = customWorkouts[selectedWorkoutSession.dayName] || selectedWorkoutSession.exercises;
+        const selectedWorkoutSession = plan.workout?.weeklySchedule?.[selectedDayOfWeek];
+        const selectedWorkoutExercises = selectedWorkoutSession ? (customWorkouts[selectedWorkoutSession.dayName] || selectedWorkoutSession.exercises || []) : [];
         const isSelectedDayDone = workoutLog.has(getDateKey(selectedDate));
 
         return (
@@ -2212,7 +2370,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                                 // Workout
                                 const isDone = workoutLog.has(dKey);
                                 const dayIndex = dateObj.getDay();
-                                const session = plan.workout.weeklySchedule[dayIndex];
+                                const session = plan.workout?.weeklySchedule?.[dayIndex];
 
                                 if (isDone) {
                                     statusIndicator = (
@@ -2337,6 +2495,316 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
         );
     };
 
+    const handleSmartImport = async (content: string, type: 'image' | 'text') => {
+        setImportStatus('loading');
+        setImportError(null);
+        try {
+            const imported = await EdgeFunctionService.parsePlan(content, type, importDistributeByDays);
+
+            // Auto toggle based on what was found
+            const hasMeals = (imported.nutrition?.meals?.length || 0) > 0;
+            const hasWorkout = (imported.workout?.weeklySchedule?.length || 0) > 0;
+
+            setImportDietSelected(hasMeals);
+            setImportWorkoutSelected(hasWorkout);
+
+            setImportedPlan(imported);
+            setImportStatus('review');
+        } catch (error: any) {
+            setImportError(error.message || 'Erro ao processar plano');
+            setImportStatus('idle');
+        }
+    };
+
+    const cleanDayNamesFromImportedPlan = () => {
+        if (!importedPlan) return;
+
+        const daysToStrip = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
+        const stripPattern = new RegExp(`^(${daysToStrip.join('|')})(-feira)?(:)?\\s*`, 'i');
+
+        const newPlan = { ...importedPlan };
+        if (newPlan.nutrition?.meals) {
+            newPlan.nutrition.meals = newPlan.nutrition.meals.map(meal => ({
+                ...meal,
+                options: (meal.options || []).map(opt => ({
+                    ...opt,
+                    name: opt.name.replace(stripPattern, '').trim() || opt.name
+                }))
+            }));
+        }
+        setImportedPlan(newPlan);
+    };
+
+    const confirmSmartImport = async () => {
+        if (importedPlan) {
+            // Backup current plan and selections
+            const currentMealCount = plan.nutrition?.meals?.length || 0;
+            if (currentMealCount >= 3) {
+                setBackupPlan(plan);
+                setBackupSelections(mealSelections);
+                localStorage.setItem('fitcoach_backup_plan', JSON.stringify(plan));
+                localStorage.setItem('fitcoach_backup_selections', JSON.stringify(mealSelections));
+            }
+
+            // SMART MERGE: Build the final plan based on selections
+            const finalPlan = { ...plan };
+
+            if (importDietSelected && importedPlan.nutrition) {
+                finalPlan.nutrition = importedPlan.nutrition;
+            }
+
+            if (importWorkoutSelected && importedPlan.workout) {
+                finalPlan.workout = importedPlan.workout;
+            }
+
+            // Apply merged plan
+            onUpdatePlan(finalPlan);
+
+            // Handle meal selections only if diet was imported
+            if (importDietSelected && finalPlan.nutrition?.meals) {
+                const newSelections = { ...mealSelections };
+                const today = new Date();
+
+                for (let i = 0; i < 7; i++) {
+                    const futureDate = new Date(today);
+                    futureDate.setDate(today.getDate() + i);
+                    const dKey = getDateKey(futureDate);
+
+                    finalPlan.nutrition.meals.forEach(meal => {
+                        const sKey = `${dKey}_${meal.id}`;
+                        const opts = getMealOptions(meal);
+                        if (opts.length > 0) {
+                            newSelections[sKey] = getOptionIndexForDate(opts, dKey);
+                        }
+                    });
+                }
+                setMealSelections(newSelections);
+                localStorage.setItem('fitcoach_selections', JSON.stringify(newSelections));
+            }
+
+            setIsSmartImportModalOpen(false);
+            setImportedPlan(null);
+            setImportStatus('idle');
+        }
+    };
+
+    const undoImport = () => {
+        if (backupPlan) {
+            onUpdatePlan(backupPlan);
+            if (Object.keys(backupSelections).length > 0) {
+                setMealSelections(backupSelections);
+                localStorage.setItem('fitcoach_selections', JSON.stringify(backupSelections));
+            }
+            setBackupPlan(null);
+            setBackupSelections({});
+            localStorage.removeItem('fitcoach_backup_plan');
+            localStorage.removeItem('fitcoach_backup_selections');
+        }
+    };
+
+    const handleRepairPlan = async () => {
+        if (confirm("Seu plano parece incompleto. Deseja tentar restaurar o plano original da IA?")) {
+            setImportStatus('loading');
+            try {
+                const repairedPlan = await EdgeFunctionService.generatePlan(user);
+                onUpdatePlan(repairedPlan);
+                alert("Plano restaurado com sucesso!");
+            } catch (error) {
+                alert("Erro ao restaurar: " + (error as any).message);
+            } finally {
+                setImportStatus('idle');
+            }
+        }
+    };
+
+    const renderSmartImportModal = () => {
+        if (!isSmartImportModalOpen) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-md">
+                <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                    <div className="p-6 bg-brand-600 text-white flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="w-6 h-6 animate-pulse text-amber-300" />
+                            <div>
+                                <h3 className="font-bold text-xl">Importação Inteligente</h3>
+                                <p className="text-brand-100 text-xs">A IA montará seu plano automaticamente</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsSmartImportModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <X className="w-5 h-5 text-white" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 flex-1 overflow-y-auto">
+                        {importStatus === 'idle' && (
+                            <div className="space-y-6">
+                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex gap-3">
+                                    <div className="bg-amber-100 p-2 rounded-lg h-fit">
+                                        <Sparkles className="w-4 h-4 text-amber-600" />
+                                    </div>
+                                    <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                                        Tire uma foto, envie um **PDF** ou cole o texto que você recebeu. A IA montará seu plano automaticamente!
+                                    </p>
+                                </div>
+
+                                {/* Info Card: Distribuição Semanal (Mandatória) */}
+                                <div className="bg-brand-50 border border-brand-100 p-4 rounded-2xl flex items-start gap-4">
+                                    <div className="bg-brand-100 p-2 rounded-xl">
+                                        <CalendarRange className="w-5 h-5 text-brand-600" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-gray-800 text-sm">Distribuição Semanal</h4>
+                                        <p className="text-[11px] text-gray-500 leading-relaxed mt-1">
+                                            O app mapeará seu cardápio e treinos para cada dia da semana automaticamente seguindo seu documento.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.accept = 'image/*,application/pdf';
+                                            input.onchange = (e: any) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (re) => {
+                                                        const base64 = re.target?.result as string;
+                                                        handleSmartImport(base64, 'image');
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            };
+                                            input.click();
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition-all text-gray-500 hover:text-brand-600 group"
+                                    >
+                                        <div className="bg-gray-100 p-3 rounded-full group-hover:bg-brand-100 transition-colors">
+                                            <Camera className="w-6 h-6" />
+                                        </div>
+                                        <span className="font-bold text-sm">Foto / PDF</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            const text = prompt("Cole aqui o texto do seu plano (dieta ou treino):");
+                                            if (text) handleSmartImport(text, 'text');
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition-all text-gray-500 hover:text-brand-600 group"
+                                    >
+                                        <div className="bg-gray-100 p-3 rounded-full group-hover:bg-brand-100 transition-colors">
+                                            <PenSquare className="w-6 h-6" />
+                                        </div>
+                                        <span className="font-bold text-sm">Colar Texto</span>
+                                    </button>
+                                </div>
+
+                                {importError && <p className="text-red-500 text-xs text-center font-bold bg-red-50 p-2 rounded-lg">{importError}</p>}
+                            </div>
+                        )}
+
+                        {importStatus === 'loading' && (
+                            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                                <div className="relative">
+                                    <Loader2 className="w-12 h-12 text-brand-600 animate-spin" />
+                                    <Sparkles className="absolute -top-1 -right-1 w-5 h-5 text-amber-400 animate-bounce" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="font-black text-gray-800 text-lg">Processando Plano...</p>
+                                    <p className="text-sm text-gray-500 animate-pulse">Lendo seu arquivo com inteligência artificial</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {importStatus === 'review' && importedPlan && (
+                            <div className="space-y-6">
+                                <div className="p-4 bg-green-50 border border-green-100 rounded-xl flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm text-green-800 font-bold">Resumo da Importação</p>
+                                        <p className="text-xs text-green-600">Confira abaixo o que conseguimos extrair:</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-2">Nutrição</h4>
+                                        <p className="text-sm font-bold text-gray-800">{(importedPlan.nutrition?.meals || []).length} Refeições</p>
+                                        <p className="text-xs text-brand-600 font-medium">{importedPlan.nutrition?.targetCalories || 0} kcal diárias</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-2">Treino</h4>
+                                        <p className="text-sm font-bold text-gray-800">{(importedPlan.workout?.weeklySchedule || []).filter(d => d.exercises && d.exercises.length > 0).length} Dias Ativos</p>
+                                        <p className="text-xs text-indigo-600 font-medium">{importedPlan.workout?.methodology ? importedPlan.workout.methodology.substring(0, 30) : ''}...</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-brand-50 p-4 rounded-xl border border-brand-100 mb-4">
+                                    <h4 className="text-[10px] font-black text-brand-700 uppercase mb-3">Escolha o que importar:</h4>
+                                    <div className="space-y-3">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={importDietSelected}
+                                                    onChange={e => setImportDietSelected(e.target.checked)}
+                                                    className="sr-only"
+                                                />
+                                                <div className={`w-10 h-6 rounded-full transition-colors ${importDietSelected ? 'bg-brand-600' : 'bg-gray-300'}`}></div>
+                                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${importDietSelected ? 'translate-x-4' : ''}`}></div>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-bold text-gray-800">Importar Dieta</span>
+                                                <p className="text-[10px] text-gray-500">Substitui sua dieta atual</p>
+                                            </div>
+                                        </label>
+
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={importWorkoutSelected}
+                                                    onChange={e => setImportWorkoutSelected(e.target.checked)}
+                                                    className="sr-only"
+                                                />
+                                                <div className={`w-10 h-6 rounded-full transition-colors ${importWorkoutSelected ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+                                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${importWorkoutSelected ? 'translate-x-4' : ''}`}></div>
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-bold text-gray-800">Importar Treino</span>
+                                                <p className="text-[10px] text-gray-500">Substitui seu treino atual</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Botão Limpar Dias */}
+                                <button
+                                    onClick={cleanDayNamesFromImportedPlan}
+                                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-brand-600 hover:border-brand-200 transition-all text-xs font-bold"
+                                >
+                                    <Eraser className="w-4 h-4" /> Limpar Nomes de Dias das Opções
+                                </button>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button onClick={() => setImportStatus('idle')} className="flex-1 py-4 text-gray-500 font-bold hover:bg-gray-50 rounded-2xl transition-all">
+                                        Tentar Novamente
+                                    </button>
+                                    <button onClick={confirmSmartImport} className="flex-1 py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-200 active:scale-95 transition-all">
+                                        Confirmar e Salvar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
             {/* TOP BAR */}
@@ -2350,9 +2818,19 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         <p className="text-[10px] text-gray-400 font-medium">PERSONAL AI TRAINER</p>
                     </div>
                 </div>
-                <button onClick={handleResetClick} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                    <RefreshCw className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                    {(plan.nutrition?.meals?.length || 0) < 3 && !backupPlan && (
+                        <button
+                            onClick={handleRepairPlan}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-[10px] font-black uppercase border border-orange-200 animate-pulse hover:bg-orange-200 transition-all"
+                        >
+                            <RefreshCw className="w-3 h-3" /> Consertar Plano
+                        </button>
+                    )}
+                    <button onClick={handleResetClick} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
             {/* CONTENT AREA */}
@@ -2418,7 +2896,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         {/* Meal Selector inside Modal if none selected or for change */}
                         <div className="px-4 py-2 border-b border-gray-50 flex items-center gap-2 overflow-x-auto no-scrollbar">
                             <span className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">Destino:</span>
-                            {plan.nutrition.meals.map(m => (
+                            {(plan.nutrition?.meals || []).map(m => (
                                 <button
                                     key={m.id}
                                     onClick={() => setCurrentMealIdForAdd(m.id)}
@@ -2885,6 +3363,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                     onFoodAnalyzed={handleMealAnalysis}
                 />
             )}
+
+            {renderSmartImportModal()}
 
         </div>
     );

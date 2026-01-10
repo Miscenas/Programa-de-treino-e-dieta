@@ -54,4 +54,29 @@ export class EdgeFunctionService {
       throw error
     }
   }
+
+  static async parsePlan(content: string, type: 'image' | 'text', distributeByDays: boolean = true): Promise<FullPlan> {
+    try {
+      console.log(`[EdgeFunctionService] Calling parse-plan. Type: ${type}. Model: Gemini 2.0 Flash (Distribuir: ${distributeByDays})`);
+      const { data, error } = await supabase.functions.invoke('parse-plan', {
+        body: { content, type, distributeByDays }
+      })
+
+      if (error) {
+        console.error('[EdgeFunctionService] Supabase invoke error:', error);
+        throw new Error(`Erro na comunicação com a IA: ${error.message}`)
+      }
+
+      if (!data?.success) {
+        console.error('[EdgeFunctionService] Backend logic error:', data?.error);
+        throw new Error(data?.error || 'Erro processar o plano com IA')
+      }
+
+      console.log('[EdgeFunctionService] Plan parsed successfully');
+      return data.data as FullPlan
+    } catch (error: any) {
+      console.error('[EdgeFunctionService] Unexpected error in parsePlan:', error)
+      throw error
+    }
+  }
 }

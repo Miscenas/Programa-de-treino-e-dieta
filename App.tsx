@@ -91,24 +91,24 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = async (profile: UserProfile) => {
     setLoading(true);
-    
+
     try {
       // Generate plan using Edge Function (more secure)
       const generatedPlan = await EdgeFunctionService.generatePlan(profile);
-      
+
       setUser(profile);
       setPlan(generatedPlan);
 
       // Persist
       localStorage.setItem('fitcoach_user', JSON.stringify(profile));
       localStorage.setItem('fitcoach_plan', JSON.stringify(generatedPlan));
-      
+
     } catch (error) {
       console.error('Error generating plan:', error);
       // Fallback to local generation if Edge Function fails
       const { generatePlan } = await import('./services/expertSystem');
       const fallbackPlan = generatePlan(profile);
-      
+
       setUser(profile);
       setPlan(fallbackPlan);
 
@@ -140,7 +140,15 @@ const App: React.FC = () => {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  return <Dashboard user={user} plan={plan} onReset={handleReset} />;
+  return <Dashboard
+    user={user}
+    plan={plan}
+    onReset={handleReset}
+    onUpdatePlan={(newPlan) => {
+      setPlan(newPlan);
+      localStorage.setItem('fitcoach_plan', JSON.stringify(newPlan));
+    }}
+  />;
 };
 
 export default App;
