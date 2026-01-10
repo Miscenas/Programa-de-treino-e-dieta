@@ -36,7 +36,7 @@ serve(async (req) => {
       - Restrições: ${userProfile.foodRestrictions?.join(', ') || 'Nenhuma'}
 
       REQUISITOS TÉCNICOS:
-      1. DIETA: Forneça pelo menos 5 refeições diárias.
+      1. DIETA: Forneça Exatamente 4 refeições diárias (Café, Almoço, Lanche, Jantar).
       2. OPÇÕES: Dentro de cada refeição ("meals"), forneça 3 OPÇÕES ("options") diferentes para o usuário escolher.
       3. TREINO: Crie um cronograma semanal ("weeklySchedule") com foco nos objetivos do usuário.
       

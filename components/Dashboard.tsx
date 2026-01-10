@@ -2108,6 +2108,16 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             </div>
                         );
                     })}
+
+                    <button
+                        onClick={handleAddMeal}
+                        className="w-full py-6 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:text-brand-600 hover:border-brand-300 hover:bg-brand-50 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
+                    >
+                        <div className="bg-gray-50 p-2 rounded-full group-hover:bg-brand-100 transition-colors">
+                            <PlusCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className="text-sm">Adicionar Nova Refeição</span>
+                    </button>
                 </div>
             </div>
         )
@@ -2615,6 +2625,43 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                 setImportStatus('idle');
             }
         }
+    };
+
+    const handleAddMeal = () => {
+        const mealName = prompt("Qual o nome da nova refeição? (Ex: Lanche da Tarde)");
+        if (!mealName) return;
+
+        const newMeal: Meal = {
+            id: `meal-${Date.now()}`,
+            name: mealName,
+            time: "16:00",
+            calories: 0,
+            macros: { protein: 0, carbs: 0, fats: 0 },
+            options: [
+                {
+                    id: `opt-${Date.now()}`,
+                    name: "Opção Padrão",
+                    description: "Clique em 'Adicionar Alimento' para montar esta refeição",
+                    ingredients: [],
+                    calories: 0,
+                    macros: { protein: 0, carbs: 0, fats: 0 }
+                }
+            ]
+        };
+
+        const newPlan = { ...plan };
+        if (!newPlan.nutrition) {
+            newPlan.nutrition = {
+                bmr: 0,
+                tdee: 0,
+                targetCalories: 2000,
+                waterIntake: 2000,
+                meals: []
+            };
+        }
+        newPlan.nutrition.meals = [...(newPlan.nutrition.meals || []), newMeal];
+        onUpdatePlan(newPlan);
+        setExpandedMeal(newMeal.id);
     };
 
     const renderSmartImportModal = () => {
