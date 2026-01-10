@@ -1976,12 +1976,16 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset }) => {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => startCamera(null, 'fruit')}
-                                className="p-2 bg-white/20 rounded-lg hover:bg-white/30 backdrop-blur-sm transition-colors text-white"
+                                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-md transition-all border border-white/30 group/ai active:scale-95 shadow-inner"
                                 title="IA Escolhedor de Frutas"
                             >
-                                <Sparkles className="w-5 h-5" />
+                                <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+                                <span className="text-xs font-black uppercase tracking-wider text-white">Escolhedor IA</span>
                             </button>
-                            <button onClick={handleShare} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 backdrop-blur-sm transition-colors">
+                            <button
+                                onClick={handleShare}
+                                className="p-2.5 bg-white/20 rounded-xl hover:bg-white/30 backdrop-blur-md transition-all border border-white/30 active:scale-95"
+                            >
                                 <Share2 className="w-5 h-5 text-white" />
                             </button>
                         </div>
