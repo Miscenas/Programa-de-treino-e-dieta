@@ -141,6 +141,7 @@ const App: React.FC = () => {
   }
 
   return <Dashboard
+    userId={authUser.id}
     user={user}
     plan={plan}
     onReset={handleReset}

@@ -1,17 +1,17 @@
-import { 
-  UserProfile, 
-  Gender, 
-  Goal, 
-  ActivityLevel, 
-  FullPlan, 
-  NutritionPlan, 
-  WorkoutPlan, 
-  WorkoutSession, 
-  Meal, 
-  Exercise, 
-  WorkoutSplit, 
-  MealOption, 
-  Ingredient 
+import {
+  UserProfile,
+  Gender,
+  Goal,
+  ActivityLevel,
+  FullPlan,
+  NutritionPlan,
+  WorkoutPlan,
+  WorkoutSession,
+  Meal,
+  Exercise,
+  WorkoutSplit,
+  MealOption,
+  Ingredient
 } from '../types';
 
 // --- Nutrition Engine ---
@@ -47,81 +47,104 @@ export const getIngredientCategory = (name: string): 'Proteína' | 'Carboidrato'
 };
 
 // Gera opções de Café da Manhã estruturadas
-const getBreakfastOptions = (cals: number): MealOption[] => {
+const getBreakfastOptions = (cals: number, prefs?: string[]): MealOption[] => {
   const opts: MealOption[] = [];
   const highCal = cals > 400;
-  
-  // Opção 1: Clássica (Pão e Ovo)
-  opts.push({
-    id: 'b-classic',
-    name: 'Clássico (Pão com Ovos)',
-    description: highCal ? "Pão, ovos e queijo reforçados." : "Pão na chapa e ovos.",
-    ingredients: [
+
+  // Opção 1: Clássica (Pão com Ovos) - Default ou pref_bread
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_bread')) {
+    opts.push({
+      id: 'b-classic',
+      name: 'Clássico (Pão com Ovos)',
+      description: highCal ? "Pão, ovos e queijo reforçados." : "Pão na chapa e ovos.",
+      ingredients: [
         { name: "Pão Francês ou Integral", amount: highCal ? "2 unidades" : "1 unidade" },
         { name: "Ovos", amount: highCal ? "3 unidades (mexidos)" : "2 unidades (mexidos)" },
         { name: highCal ? "Queijo Mussarela" : "Requeijão Light", amount: highCal ? "2 fatias" : "1 ponta de faca" },
         { name: "Café com Leite", amount: "1 xícara (200ml)" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 2: Regional (Cuscuz/Tapioca)
-  opts.push({
-    id: 'b-regional',
-    name: 'Regional (Cuscuz/Tapioca)',
-    description: highCal ? "Cuscuz/Tapioca recheada." : "Cuscuz/Tapioca simples.",
-    ingredients: [
+  // Opção 2: Regional (Cuscuz/Tapioca) - pref_tapioca
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_tapioca')) {
+    opts.push({
+      id: 'b-regional',
+      name: 'Regional (Cuscuz/Tapioca)',
+      description: highCal ? "Cuscuz/Tapioca recheada." : "Cuscuz/Tapioca simples.",
+      ingredients: [
         { name: "Goma de Tapioca ou Flocão", amount: highCal ? "100g (Goma) ou 80g (Flocão)" : "60g (Goma) ou 50g (Flocão)" },
         { name: highCal ? "Peito de Frango Desfiado" : "Ovos", amount: highCal ? "100g" : "2 unidades" },
         { name: highCal ? "Queijo Coalho" : "Manteiga", amount: highCal ? "1 fatia grossa" : "1 colher de chá" },
         { name: "Café Preto", amount: "1 xícara" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 3: Mingau (Conforto)
-  opts.push({
-    id: 'b-porridge',
-    name: 'Mingau de Aveia',
-    description: "Opção quente e saciante.",
-    ingredients: [
+  // Opção 3: Mingau (Conforto) - pref_porridge
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_porridge')) {
+    opts.push({
+      id: 'b-porridge',
+      name: 'Mingau de Aveia',
+      description: "Opção quente e saciante.",
+      ingredients: [
         { name: "Aveia em Flocos", amount: highCal ? "60g (6 col. sopa)" : "30g (3 col. sopa)" },
         { name: "Leite Desnatado/Vegetal", amount: "200ml" },
         { name: "Whey Protein (Opcional)", amount: highCal ? "1 dose (30g)" : "Meia dose (15g)" },
         { name: "Banana Picada", amount: "1 unidade" },
         { name: "Canela em pó", amount: "a gosto" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 4: Crepioca (Proteica)
-  opts.push({
-    id: 'b-crepioca',
-    name: 'Crepioca Recheada',
-    description: "Massa feita com ovo e tapioca.",
-    ingredients: [
+  // Opção 4: Crepioca (Proteica) - pref_pancake
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_pancake')) {
+    opts.push({
+      id: 'b-crepioca',
+      name: 'Crepioca Recheada',
+      description: "Massa feita com ovo e tapioca.",
+      ingredients: [
         { name: "Ovos", amount: "2 unidades" },
         { name: "Goma de Tapioca", amount: highCal ? "40g (2 col. sopa)" : "20g (1 col. sopa)" },
         { name: "Requeijão Light", amount: "1 col. sopa (na massa)" },
         { name: "Peito de Peru ou Frango", amount: highCal ? "4 fatias/80g" : "2 fatias/40g" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 5: Doce Fit (Panqueca de Banana)
-  opts.push({
-    id: 'b-pancake',
-    name: 'Panqueca de Banana Fit',
-    description: "Para quem gosta de doce pela manhã.",
-    ingredients: [
+  // Opção 5: Doce Fit (Panqueca de Banana) - pref_pancake
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_pancake')) {
+    opts.push({
+      id: 'b-pancake',
+      name: 'Panqueca de Banana Fit',
+      description: "Para quem gosta de doce pela manhã.",
+      ingredients: [
         { name: "Banana Amassada", amount: highCal ? "2 unidades" : "1 unidade" },
         { name: "Ovos", amount: "2 unidades" },
         { name: "Aveia em Flocos Finos", amount: highCal ? "30g" : "15g" },
         { name: "Mel", amount: "1 fio" }
-    ]
-  });
+      ]
+    });
+  }
+
+  // Fallback se não sobrou nada (ex: usuario desmarcou tudo)
+  if (opts.length === 0) {
+    opts.push({
+      id: 'b-fallback',
+      name: 'Café Simples',
+      description: "Opção básica de segurança.",
+      ingredients: [
+        { name: "Pão Integral", amount: "2 fatias" },
+        { name: "Ovos Mexidos", amount: "2 unidades" }
+      ]
+    });
+  }
 
   return opts;
 };
 
 // Gera opções de Almoço/Jantar
-const getMainMealOptions = (cals: number, isDinner: boolean): MealOption[] => {
+const getMainMealOptions = (cals: number, isDinner: boolean, prefs?: string[]): MealOption[] => {
   const opts: MealOption[] = [];
   const highCal = cals > 500;
 
@@ -130,86 +153,109 @@ const getMainMealOptions = (cals: number, isDinner: boolean): MealOption[] => {
   const beanAmount = "1 concha média";
   const proteinAmount = highCal ? "150g (pesado cru)" : "120g (pesado cru)";
   const vegAmount = "À vontade (min. meio prato)";
-  
-  // Opção 1: O PF Brasileiro
-  opts.push({
-    id: isDinner ? 'd-pf' : 'l-pf',
-    name: 'PF Brasileiro Tradicional',
-    description: "O arroz e feijão nosso de cada dia.",
-    ingredients: [
+
+  // Opção 1: O PF Brasileiro - pref_rice_beans
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_rice_beans')) {
+    opts.push({
+      id: isDinner ? 'd-pf' : 'l-pf',
+      name: 'PF Brasileiro Tradicional',
+      description: "O arroz e feijão nosso de cada dia.",
+      ingredients: [
         { name: "Arroz Branco/Integral", amount: carbAmount },
         { name: "Feijão Carioca", amount: beanAmount },
         { name: "Peito de Frango ou Patinho", amount: proteinAmount },
         { name: "Salada Variada", amount: vegAmount }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 2: Raízes & Grelhados
-  opts.push({
-    id: isDinner ? 'd-roots' : 'l-roots',
-    name: 'Raízes & Grelhado',
-    description: "Carboidratos complexos de raízes.",
-    ingredients: [
+  // Opção 2: Raízes & Grelhados - pref_roots
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_roots')) {
+    opts.push({
+      id: isDinner ? 'd-roots' : 'l-roots',
+      name: 'Raízes & Grelhado',
+      description: "Carboidratos complexos de raízes.",
+      ingredients: [
         { name: "Batata Doce/Inglesa/Mandioca", amount: highCal ? "250g" : "150g" },
         { name: "Peito de Frango ou Tilápia", amount: proteinAmount },
         { name: "Legumes no Vapor (Brócolis/Cenoura)", amount: "1 pires cheio" },
         { name: "Azeite de Oliva", amount: "1 fio (5ml)" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 3: Escondidinho (Variação)
-  opts.push({
-    id: isDinner ? 'd-hide' : 'l-hide',
-    name: 'Escondidinho Fit',
-    description: "Purê com carne moída magra.",
-    ingredients: [
+  // Opção 3: Escondidinho (Variação) - pref_roots
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_roots')) {
+    opts.push({
+      id: isDinner ? 'd-hide' : 'l-hide',
+      name: 'Escondidinho Fit',
+      description: "Purê com carne moída magra.",
+      ingredients: [
         { name: "Purê de Batata/Mandioca/Abóbora", amount: highCal ? "250g" : "160g" },
         { name: "Carne Moída (Patinho)", amount: proteinAmount },
         { name: "Queijo Mussarela (Gratinar)", amount: "1 fatia" },
         { name: "Salada Verde", amount: vegAmount }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 4: Strogonoff Fit (Variação)
-  opts.push({
-    id: isDinner ? 'd-strogo' : 'l-strogo',
-    name: 'Strogonoff Fit',
-    description: "Feito com iogurte ou creme de ricota.",
-    ingredients: [
+  // Opção 4: Strogonoff Fit (Variação) - pref_rice_beans OR pref_pasta
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_rice_beans') || prefs.includes('pref_pasta')) {
+    opts.push({
+      id: isDinner ? 'd-strogo' : 'l-strogo',
+      name: 'Strogonoff Fit',
+      description: "Feito com iogurte ou creme de ricota.",
+      ingredients: [
         { name: "Arroz Branco", amount: carbAmount },
         { name: "Peito de Frango em Cubos", amount: proteinAmount },
         { name: "Molho de Tomate Natural", amount: "4 col. sopa" },
         { name: "Creme de Ricota ou Iogurte Natural", amount: "2 col. sopa (misturar no fim)" },
         { name: "Batata Palha (Moderação)", amount: "1 punhado pequeno" }
-    ]
-  });
+      ]
+    });
+  }
 
   // Opção 5: Massa ou Omelete
   if (!isDinner) {
-    // Almoço: Massa
-    opts.push({
-      id: 'l-pasta',
-      name: 'Macarrão à Bolonhesa',
-      description: "Energia rápida.",
-      ingredients: [
+    // Almoço: Massa - pref_pasta
+    if (!prefs || prefs.length === 0 || prefs.includes('pref_pasta')) {
+      opts.push({
+        id: 'l-pasta',
+        name: 'Macarrão à Bolonhesa',
+        description: "Energia rápida.",
+        ingredients: [
           { name: "Macarrão", amount: highCal ? "200g (cozido)" : "100g (cozido)" },
           { name: "Carne Moída (Patinho)", amount: proteinAmount },
           { name: "Molho de Tomate", amount: "4 colheres de sopa" },
           { name: "Queijo Parmesão", amount: "1 colher chá" }
-      ]
-    });
+        ]
+      });
+    }
   } else {
-    // Jantar: Omelete/Wrap
-    const eggAmount = highCal ? "4 unidades" : "3 unidades";
+    // Jantar: Omelete/Wrap - pref_bread (assume que quem gosta de pão gosta de wrap/omelete) OR Default
     opts.push({
       id: 'd-omelet',
       name: 'Omelete Turbinado',
       description: "Leve e fácil digestão.",
       ingredients: [
-          { name: "Ovos", amount: eggAmount },
-          { name: "Aveia em Flocos (na massa)", amount: "1 col. sopa" },
-          { name: "Recheio: Frango/Queijo/Atum", amount: "3 col. sopa" },
-          { name: "Salada Colorida", amount: "1 prato cheio" }
+        { name: "Ovos", amount: highCal ? "4 unidades" : "3 unidades" },
+        { name: "Aveia em Flocos (na massa)", amount: "1 col. sopa" },
+        { name: "Recheio: Frango/Queijo/Atum", amount: "3 col. sopa" },
+        { name: "Salada Colorida", amount: "1 prato cheio" }
+      ]
+    });
+  }
+
+  // Fallback
+  if (opts.length === 0) {
+    opts.push({
+      id: 'main-fallback',
+      name: 'Prato Feito Simples',
+      description: "Arroz, feijão e proteína.",
+      ingredients: [
+        { name: "Arroz", amount: "100g" },
+        { name: "Feijão", amount: "1 concha" },
+        { name: "Frango", amount: "120g" }
       ]
     });
   }
@@ -218,57 +264,78 @@ const getMainMealOptions = (cals: number, isDinner: boolean): MealOption[] => {
 };
 
 // Gera opções de Lanche
-const getSnackOptions = (cals: number): MealOption[] => {
+const getSnackOptions = (cals: number, prefs?: string[]): MealOption[] => {
   const opts: MealOption[] = [];
   const highCal = cals > 300;
 
-  // Opção 1: Fruta e Lácteo
-  opts.push({
-    id: 's-light',
-    name: 'Iogurte com Fruta',
-    description: "Opção rápida e digestiva.",
-    ingredients: [
+  // Opção 1: Fruta e Lácteo - pref_dairy
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_dairy')) {
+    opts.push({
+      id: 's-light',
+      name: 'Iogurte com Fruta',
+      description: "Opção rápida e digestiva.",
+      ingredients: [
         { name: "Frutas (Maçã/Pera/Banana)", amount: highCal ? "2 unidades" : "1 unidade" },
         { name: "Iogurte Natural", amount: "1 pote (170g)" },
         ...(highCal ? [{ name: "Granola/Castanhas", amount: "30g" }] : [])
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 2: Sanduíche
-  opts.push({
-    id: 's-sandwich',
-    name: 'Sanduíche Natural',
-    description: "Lanche salgado prático.",
-    ingredients: [
+  // Opção 2: Sanduíche - pref_sandwich
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_sandwich')) {
+    opts.push({
+      id: 's-sandwich',
+      name: 'Sanduíche Natural',
+      description: "Lanche salgado prático.",
+      ingredients: [
         { name: "Pão de Forma Integral", amount: "2 fatias" },
         { name: "Pasta de Atum ou Frango Desfiado", amount: highCal ? "4 col. sopa" : "2 col. sopa" },
         { name: "Alface e Tomate", amount: "a gosto" }
-    ]
-  });
+      ]
+    });
+  }
 
-  // Opção 3: Shake
-  opts.push({
-    id: 's-shake',
-    name: 'Vitamina Proteica',
-    description: "Para quem está na correria.",
-    ingredients: [
+  // Opção 3: Shake - pref_shakes
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_shakes')) {
+    opts.push({
+      id: 's-shake',
+      name: 'Vitamina Proteica',
+      description: "Para quem está na correria.",
+      ingredients: [
         { name: "Whey Protein", amount: "1 dose (30g)" },
         { name: "Leite Desnatado/Água", amount: "250ml" },
         { name: "Fruta (Banana/Morango/Abacate)", amount: highCal ? "1 unidade + 1 col. pasta de amendoim" : "1 unidade" }
-    ]
-  });
-  
-  // Opção 4: Ovos com Torrada
-  opts.push({
-    id: 's-eggs',
-    name: 'Ovos com Torrada',
-    description: "Salado e saciante.",
-    ingredients: [
+      ]
+    });
+  }
+
+  // Opção 4: Ovos com Torrada - pref_bread (assume que quem gosta de pão gosta de torrada)
+  if (!prefs || prefs.length === 0 || prefs.includes('pref_bread')) {
+    opts.push({
+      id: 's-eggs',
+      name: 'Ovos com Torrada',
+      description: "Salgado e saciante.",
+      ingredients: [
         { name: "Ovos Cozidos", amount: highCal ? "3 unidades" : "2 unidades" },
         { name: "Torradas Integrais", amount: highCal ? "4 unidades" : "2 unidades" },
         { name: "Azeite/Orégano", amount: "fio" }
-    ]
-  });
+      ]
+    });
+  }
+
+  // Fallback
+  if (opts.length === 0) {
+    opts.push({
+      id: 'snack-fallback',
+      name: 'Mix de Castanhas e Fruta',
+      description: "Opção prática.",
+      ingredients: [
+        { name: "Castanha do Pará/Caju", amount: "30g" },
+        { name: "Maçã", amount: "1 unidade" }
+      ]
+    });
+  }
 
   return opts;
 };
@@ -277,7 +344,7 @@ const generateNutritionPlan = (user: UserProfile, bmr: number): NutritionPlan =>
   const activityMultiplier = getActivityMultiplier(user.activityLevel);
   const tdee = Math.round(bmr * activityMultiplier);
   let targetCalories = tdee;
-  
+
   if (user.goal === Goal.WeightLoss) targetCalories -= 500;
   else targetCalories += 300;
 
@@ -285,14 +352,14 @@ const generateNutritionPlan = (user: UserProfile, bmr: number): NutritionPlan =>
   if (user.gender === Gender.Male && targetCalories < 1500) targetCalories = 1500;
 
   const waterIntake = Math.round(user.weight * 35);
-  
+
   const mealRatios = [0.25, 0.35, 0.15, 0.25];
   const mealNames = ["Café da Manhã", "Almoço", "Lanche da Tarde", "Jantar"];
   const mealTimes = ["07:30", "12:30", "16:30", "20:00"];
 
   const meals: Meal[] = mealNames.map((name, index) => {
     const cals = Math.round(targetCalories * mealRatios[index]);
-    
+
     const p = Math.round((cals * 0.3) / 4);
     const c = Math.round((cals * 0.4) / 4);
     const f = Math.round((cals * 0.3) / 9);
@@ -300,13 +367,13 @@ const generateNutritionPlan = (user: UserProfile, bmr: number): NutritionPlan =>
     let options: MealOption[] = [];
 
     if (index === 0) { // Café
-      options = getBreakfastOptions(cals);
+      options = getBreakfastOptions(cals, user.foodPreferences);
     } else if (index === 1) { // Almoço
-      options = getMainMealOptions(cals, false);
+      options = getMainMealOptions(cals, false, user.foodPreferences);
     } else if (index === 3) { // Jantar
-      options = getMainMealOptions(cals, true);
+      options = getMainMealOptions(cals, true, user.foodPreferences);
     } else { // Lanche
-      options = getSnackOptions(cals);
+      options = getSnackOptions(cals, user.foodPreferences);
     }
 
     return {
@@ -332,7 +399,7 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
   const isHypertrophy = user.goal === Goal.MuscleGain;
 
   const restTime = isHypertrophy ? "60-90s" : "45-60s";
-  
+
   const ex = (name: string, sets: number, reps: string, notes: string = "", method: string = ""): Exercise => ({
     name, sets, reps, rest: restTime, notes, method
   });
@@ -346,7 +413,7 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
     method: "Aquecimento"
   });
 
-  const cardio = user.goal === Goal.WeightLoss 
+  const cardio = user.goal === Goal.WeightLoss
     ? ex("Cardio Moderado (Esteira/Elíptico)", 1, "20-30 min", "Mantenha FC entre 120-140bpm")
     : ex("Cardio Leve", 1, "10-15 min", "Caminhada rápida apenas para saúde cardiovascular");
 
@@ -454,7 +521,7 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
   ];
 
   // ABCDE (5 DIAS)
-  const chestDay = [...abcdA]; 
+  const chestDay = [...abcdA];
   const backDay = [...abcdB];
   const legDay = [...abcdC];
   const shoulderDay = [...abcdD];
@@ -469,7 +536,7 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
   ];
 
   // --- LOGICA DE MONTAGEM DO CALENDÁRIO ---
-  
+
   // 1. Definir os templates de treino disponíveis baseados no split
   let sessionTemplates: { focus: string, exercises: Exercise[] }[] = [];
   let methodologyName = "";
@@ -511,8 +578,8 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
       { focus: "Braços", exercises: armDay }
     ];
   } else if (split === WorkoutSplit.PPL_2X) {
-     methodologyName = "PPL 2x";
-     sessionTemplates = [
+    methodologyName = "PPL 2x";
+    sessionTemplates = [
       { focus: "Empurrar", exercises: push },
       { focus: "Puxar", exercises: pull },
       { focus: "Pernas", exercises: legs }
@@ -521,7 +588,7 @@ const generateWorkoutPlan = (user: UserProfile): WorkoutPlan => {
 
   // 2. Mapear os dias da semana (0 = Domingo) e preencher
   const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-  
+
   // Controle de qual template usar (para rotacionar: A, B, A, B...)
   let templateIndex = 0;
 

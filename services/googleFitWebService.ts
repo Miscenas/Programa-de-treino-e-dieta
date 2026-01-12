@@ -2,6 +2,8 @@ export class GoogleFitWebService {
   private static tokenClient: any = null;
   private static accessToken: string | null = null;
   private static CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'seu-client-id-aqui';
+  private static STORAGE_KEY = 'google_fit_token';
+  private static EXPIRY_KEY = 'google_fit_token_expiry';
 
   // Carregar Google Identity Services (GIS)
   static async loadGIS(): Promise<void> {
@@ -25,6 +27,11 @@ export class GoogleFitWebService {
 
   // Conectar com Google Fit
   static async connect(): Promise<any> {
+    // Tentar restaurar sessão anterior
+    if (this.restoreSession()) {
+      return Promise.resolve();
+    }
+
     try {
       await this.loadGIS();
 
@@ -45,6 +52,11 @@ export class GoogleFitWebService {
             }
 
             this.accessToken = response.access_token;
+
+            // Persistir token (3500s de validade para segurança)
+            localStorage.setItem(this.STORAGE_KEY, response.access_token);
+            localStorage.setItem(this.EXPIRY_KEY, (Date.now() + 3500 * 1000).toString());
+
             console.log('Google Fit connected successfully');
             resolve(response);
           },
@@ -177,7 +189,24 @@ export class GoogleFitWebService {
   static disconnect(): void {
     this.accessToken = null;
     this.tokenClient = null;
+    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem(this.EXPIRY_KEY);
     console.log('Google Fit disconnected');
+  }
+
+  // Tentar restaurar sessão salva
+  static restoreSession(): boolean {
+    if (this.accessToken) return true;
+
+    const token = localStorage.getItem(this.STORAGE_KEY);
+    const expiry = localStorage.getItem(this.EXPIRY_KEY);
+
+    if (token && expiry && Date.now() < parseInt(expiry)) {
+      this.accessToken = token;
+      return true;
+    }
+
+    return false;
   }
 
   // Obter dados do último dia

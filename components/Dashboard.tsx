@@ -1,8 +1,10 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot } from 'lucide-react';
+import { FoodPreferencesModal } from './FoodPreferencesModal';
 import { foodDatabase } from '../services/foodDatabase';
-import { getIngredientCategory } from '../services/expertSystem';
+import { getIngredientCategory, generatePlan } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { NutritionDashboard } from './NutritionDashboard';
@@ -12,6 +14,7 @@ import { GoogleFitWebService } from '../services/googleFitWebService';
 import { supabase } from '../services/supabaseClient';
 
 interface Props {
+    userId: string;
     plan: FullPlan;
     user: UserProfile;
     onReset: () => void;
@@ -71,7 +74,7 @@ const ModernGauge: React.FC<{
 
     const rotation = 150;
 
-    const gradientId = `grad-${type}`;
+    const gradientId = `grad - ${type} `;
     const colors = type === 'calories'
         ? { start: '#f97316', end: '#dc2626', bg: '#fee2e2' }
         : type === 'deficit'
@@ -112,13 +115,13 @@ const ModernGauge: React.FC<{
 
     return (
         <div className="flex flex-col items-center justify-center relative" style={{ width: size }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size} `} className="overflow-visible">
                 <defs>
                     <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor={colors.start} />
                         <stop offset="100%" stopColor={colors.end} />
                     </linearGradient>
-                    <filter id={`glow-${type}`} x="-20%" y="-20%" width="140%" height="140%">
+                    <filter id={`glow - ${type} `} x="-20%" y="-20%" width="140%" height="140%">
                         <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor={colors.end} floodOpacity="0.3" />
                     </filter>
                 </defs>
@@ -133,7 +136,7 @@ const ModernGauge: React.FC<{
                     stroke={colors.bg}
                     strokeWidth={strokeWidth}
                     strokeLinecap="round"
-                    strokeDasharray={`${arcLength} ${circumference}`}
+                    strokeDasharray={`${arcLength} ${circumference} `}
                     transform={`rotate(${rotation} ${center} ${center})`}
                 />
 
@@ -145,26 +148,26 @@ const ModernGauge: React.FC<{
                     stroke={`url(#${gradientId})`}
                     strokeWidth={strokeWidth}
                     strokeLinecap="round"
-                    strokeDasharray={`${arcLength} ${circumference}`}
+                    strokeDasharray={`${arcLength} ${circumference} `}
                     strokeDashoffset={strokeDashoffset}
                     transform={`rotate(${rotation} ${center} ${center})`}
                     className="transition-all duration-1000 ease-out"
-                    filter={`url(#glow-${type})`}
+                    filter={`url(#glow - ${type})`}
                 />
             </svg>
 
             <div className="absolute inset-0 flex flex-col items-center justify-center mt-3">
                 <div className="text-gray-400 mb-0.5 scale-90">{icon}</div>
-                <span className="text-2xl font-black text-gray-800 leading-none tracking-tight">{value}</span>
+                <span className={`font - black text - gray - 800 leading - none tracking - tight ${value > 9999 ? 'text-xl' : 'text-2xl'} `}>{value}</span>
                 <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{suffix} / {max}</span>
             </div>
 
-            <span className="text-xs font-bold text-gray-500 -mt-2 whitespace-nowrap">{label}</span>
+            <span className="text-xs font-bold text-gray-500 mt-1 whitespace-nowrap">{label}</span>
         </div>
     );
 };
 
-export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }) => {
+export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpdatePlan }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'workout' | 'diet' | 'shopping' | 'calendar' | 'progress'>('overview');
     const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
     const [expandedDay, setExpandedDay] = useState<string | null>(
@@ -193,7 +196,9 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     const [mealSelections, setMealSelections] = useState<Record<string, number>>({});
 
     // Map MealId -> Array of MealOption (Custom user created options)
+    // Map MealId -> Array of MealOption (Custom user created options)
     const [customOptions, setCustomOptions] = useState<Record<string, MealOption[]>>({});
+
 
     // Map "Date_MealId" -> Array of excluded ingredient indices
     const [excludedIngredients, setExcludedIngredients] = useState<Record<string, number[]>>({});
@@ -214,6 +219,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     const [weightHistory, setWeightHistory] = useState<Record<string, number>>({});
     const [bodyFatHistory, setBodyFatHistory] = useState<Record<string, number>>({});
     const [waistHistory, setWaistHistory] = useState<Record<string, number>>({});
+    const [loadingMeasurements, setLoadingMeasurements] = useState(false);
 
     // Smart Plan Import states
     const [isSmartImportModalOpen, setIsSmartImportModalOpen] = useState(false);
@@ -245,14 +251,80 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     // Caloric Deficit Goal State
     const [deficitGoal, setDeficitGoal] = useState<number>(() => {
         const saved = localStorage.getItem('fitcoach_deficit_goal');
-        return saved ? parseInt(saved) : 500; // Default 500 kcal
+        const val = saved ? parseInt(saved) : 7700;
+        // Migration: If the saved value is too low (e.g. 500), it's probably the old daily value
+        return val < 1000 ? 7700 : val;
     });
+    // Add start date state
+    const [deficitStartDate, setDeficitStartDate] = useState<string | null>(() => {
+        return localStorage.getItem('fitcoach_deficit_start_date');
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_deficit_goal', String(deficitGoal));
+    }, [deficitGoal]);
+
+    useEffect(() => {
+        if (deficitStartDate) {
+            localStorage.setItem('fitcoach_deficit_start_date', deficitStartDate);
+        }
+    }, [deficitStartDate]);
+
     const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
+    const [isDeficitBreakdownOpen, setIsDeficitBreakdownOpen] = useState(false);
+
+    // Nutrition Goals Selection (Target calories/macros)
+    const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false);
+    const [customTargets, setCustomTargets] = useState<{
+        calories: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+    }>(() => {
+        const saved = localStorage.getItem('fitcoach_custom_targets');
+        if (saved) return JSON.parse(saved);
+
+        // Fallback to plan targets
+        return {
+            calories: plan.nutrition?.targetCalories || 2000,
+            protein: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.targetProtein || 0), 0) || 150,
+            carbs: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.targetCarbs || 0), 0) || 200,
+            fats: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.targetFats || 0), 0) || 60
+        };
+    });
+
+
+    // Save custom targets when they change
+    useEffect(() => {
+        localStorage.setItem('fitcoach_custom_targets', JSON.stringify(customTargets));
+    }, [customTargets]);
+
+    // Auto-sync Google Fit if token is valid
+    useEffect(() => {
+        const tryAutoSync = async () => {
+            if (GoogleFitWebService.restoreSession()) {
+                handleGoogleFitImport();
+            }
+        };
+        tryAutoSync();
+    }, []);
 
 
     // Modals State
     const [isFoodModalOpen, setFoodModalOpen] = useState(false);
     const [isExerciseModalOpen, setExerciseModalOpen] = useState(false);
+    const [isFoodPreferencesModalOpen, setIsFoodPreferencesModalOpen] = useState(false);
+
+    // Food Preferences State
+    const [foodPreferences, setFoodPreferences] = useState<string[]>(() => {
+        const saved = localStorage.getItem('fitcoach_food_preferences');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_food_preferences', JSON.stringify(foodPreferences));
+        // We cannot update user prop here, but localStorage is source of truth for next reload
+    }, [foodPreferences]);
 
     // Camera Modal State
     const [isCameraOpen, setCameraOpen] = useState(false);
@@ -324,7 +396,11 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
 
         // 2. Fallback to Monday-based index (0-Mon, 6-Sun)
         const mondayBasedIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        return mondayBasedIndex % options.length;
+        const result = mondayBasedIndex % options.length;
+
+        // Ensure we never return NaN
+        if (isNaN(result)) return 0;
+        return result;
     };
 
     const handleSmartImport = async (content: string, type: 'image' | 'text') => {
@@ -352,7 +428,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         if (!importedPlan) return;
 
         const daysToStrip = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
-        const stripPattern = new RegExp(`^(${daysToStrip.join('|')})(-feira)?(:)?\\s*`, 'i');
+        const stripPattern = new RegExp(`^ (${daysToStrip.join('|')}) (-feira) ? (:)?\\s * `, 'i');
 
         const newPlan = { ...importedPlan };
         if (newPlan.nutrition?.meals) {
@@ -403,7 +479,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     const dKey = getDateKey(futureDate);
 
                     finalPlan.nutrition.meals.forEach(meal => {
-                        const sKey = `${dKey}_${meal.id}`;
+                        const sKey = `${dKey}_${meal.id} `;
                         const opts = getMealOptions(meal);
                         if (opts.length > 0) {
                             newSelections[sKey] = getOptionIndexForDate(opts, dKey);
@@ -454,14 +530,14 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         if (!mealName) return;
 
         const newMeal: Meal = {
-            id: `meal-${Date.now()}`,
+            id: `meal - ${Date.now()} `,
             name: mealName,
             time: "16:00",
             calories: 0,
             macros: { protein: 0, carbs: 0, fats: 0 },
             options: [
                 {
-                    id: `opt-${Date.now()}`,
+                    id: `opt - ${Date.now()} `,
                     name: "Opção Padrão",
                     description: "Clique em 'Adicionar Alimento' para montar esta refeição",
                     ingredients: [],
@@ -518,6 +594,25 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             setGoogleFitData(merged);
             localStorage.setItem('google_fit_cache', JSON.stringify(merged));
 
+            // 5. Salvar no Supabase (Upsert)
+            if (userId && merged.length > 0) {
+                const upsertData = merged.map(item => ({
+                    user_id: userId,
+                    date: item.date,
+                    steps: item.steps,
+                    calories_burned: item.calories_burned,
+                    source: 'google_fit_import'
+                }));
+
+                const { error: upsertError } = await supabase
+                    .from('smartwatch_data')
+                    .upsert(upsertData, { onConflict: 'user_id,date' });
+
+                if (upsertError) {
+                    console.error("Erro ao salvar no Supabase:", upsertError);
+                }
+            }
+
             alert("Google Fit sincronizado!");
         } catch (error: any) {
             console.error("Erro no Google Fit:", error);
@@ -528,12 +623,42 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const fetchGoogleFitData = async () => {
+        // 1. Tentar carregar do cache local para resposta rápida
         const cache = localStorage.getItem('google_fit_cache');
         if (cache) {
             try {
                 setGoogleFitData(JSON.parse(cache));
             } catch (e) {
                 console.error("Erro ao carregar cache do Google Fit:", e);
+            }
+        }
+
+        // 2. Buscar dados mais recentes do Supabase
+        if (userId) {
+            setLoadingGoogleFitData(true);
+            try {
+                const { data, error } = await supabase
+                    .from('smartwatch_data')
+                    .select('date, steps, calories_burned')
+                    .eq('user_id', userId)
+                    .order('date', { ascending: false })
+                    .limit(30);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const formattedData = data.map(item => ({
+                        date: item.date,
+                        steps: item.steps,
+                        calories_burned: item.calories_burned
+                    }));
+                    setGoogleFitData(formattedData);
+                    localStorage.setItem('google_fit_cache', JSON.stringify(formattedData));
+                }
+            } catch (err) {
+                console.error("Erro ao buscar dados do Supabase:", err);
+            } finally {
+                setLoadingGoogleFitData(false);
             }
         }
     };
@@ -626,7 +751,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             return Math.round(logged.reduce((sum, item) => sum + item.calories, 0));
         }
 
-        const selectionKey = `${dateKey}_${meal.id}`;
+        const selectionKey = `${dateKey}_${meal.id} `;
         let optionIndex = mealSelections[selectionKey];
         const allOptions = getMealOptions(meal);
 
@@ -759,6 +884,49 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         localStorage.setItem('fitcoach_deficit_goal', deficitGoal.toString());
     }, [deficitGoal]);
 
+    // Fetch User Measurements from Supabase
+    useEffect(() => {
+        const fetchMeasurements = async () => {
+            if (!userId) return;
+            setLoadingMeasurements(true);
+            try {
+                const { data, error } = await supabase
+                    .from('user_measurements')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('date', { ascending: true });
+
+                if (error) {
+                    console.error('Error fetching measurements:', error);
+                    return;
+                }
+
+                if (data) {
+                    const weights: Record<string, number> = {};
+                    const bodyFats: Record<string, number> = {};
+                    const waists: Record<string, number> = {};
+
+                    data.forEach((row: any) => {
+                        const dateKey = row.date; // already YYYY-MM-DD from Supabase date type
+                        if (row.weight) weights[dateKey] = Number(row.weight);
+                        if (row.body_fat) bodyFats[dateKey] = Number(row.body_fat);
+                        if (row.waist) waists[dateKey] = Number(row.waist);
+                    });
+
+                    setWeightHistory(weights);
+                    setBodyFatHistory(bodyFats);
+                    setWaistHistory(waists);
+                }
+            } catch (err) {
+                console.error('Unexpected error fetching measurements:', err);
+            } finally {
+                setLoadingMeasurements(false);
+            }
+        };
+
+        fetchMeasurements();
+    }, [userId]);
+
 
     // --- ACTIONS ---
 
@@ -771,7 +939,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             const newMealLog = [];
             analysis.foods.forEach(food => {
                 newMealLog.push({
-                    id: `analyzed-${Date.now()}-${Math.random()}`,
+                    id: `analyzed - ${Date.now()} -${Math.random()} `,
                     name: food.name,
                     calories: food.calories,
                     protein: food.protein,
@@ -795,7 +963,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         // Also save as selected option for this meal in diet tab
         setMealSelections(prev => ({
             ...prev,
-            [`${todayKey}_${mealId}`]: 0 // Select first option (the analyzed one)
+            [`${todayKey}_${mealId} `]: 0 // Select first option (the analyzed one)
         }));
     };
 
@@ -819,7 +987,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const toggleMealConsumption = (mealId: string, dateKey: string) => {
-        const key = `${dateKey}_${mealId}`;
+        const key = `${dateKey}_${mealId} `;
         const newConsumed = new Set(consumedMeals);
         if (newConsumed.has(key)) newConsumed.delete(key);
         else newConsumed.add(key);
@@ -908,7 +1076,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         let total = 0;
 
         (plan.nutrition?.meals || []).forEach(meal => {
-            const isConsumed = consumedMeals.has(`${dateKey}_${meal.id}`);
+            const isConsumed = consumedMeals.has(`${dateKey}_${meal.id} `);
 
             if (onlyConsumed && !isConsumed) {
                 return;
@@ -921,16 +1089,17 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const getDailyMacros = (dateKey: string) => {
-        const targets = { protein: 0, carbs: 0, fats: 0 };
+        const targets = {
+            protein: customTargets.protein,
+            carbs: customTargets.carbs,
+            fats: customTargets.fats,
+            calories: customTargets.calories
+        };
         const consumed = { protein: 0, carbs: 0, fats: 0 };
         const dayLog = dietHistory[dateKey] || {};
 
         (plan.nutrition?.meals || []).forEach(meal => {
-            targets.protein += meal.macros?.protein || 0;
-            targets.carbs += meal.macros?.carbs || 0;
-            targets.fats += meal.macros?.fats || 0;
-
-            if (consumedMeals.has(`${dateKey}_${meal.id}`)) {
+            if (consumedMeals.has(`${dateKey}_${meal.id} `)) {
                 const logged = dayLog[meal.id];
 
                 if (logged && logged.length > 0) {
@@ -941,7 +1110,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     });
                 } else {
                     // Check selected option
-                    const optionIndex = mealSelections[`${dateKey}_${meal.id}`] || 0;
+                    const optionIndex = mealSelections[`${dateKey}_${meal.id} `] || 0;
 
                     if (optionIndex === 0) {
                         consumed.protein += meal.macros?.protein || 0;
@@ -963,22 +1132,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         }
                     }
                 }
-            } else {
-                // Not consumed, check if a different option is selected to update targets?
-                // Actually user requested counters to update. Gauges usually show "Consumed" vs "Target".
-                // If the user SWAPS an option, the "Target" or "Planned" might change?
-                // The prompt says "contadores de calorias". Usually implies "Consumed" or the "Daily Total" gauge.
-                // If "Calorias (Hoje)" gauge relies on "todayConsumedCalories", that is only CONSUMED.
-                // But maybe they mean the "Resumo da Dieta" or simply expecting the gauge to fill up differently?
-                // Wait, if I haven't consumed it, the gauge is 0.
-                // Maybe they mean the PLANNED total?
-                // "getCaloriesForDate(dateKey, false)" calculates PLANNED.
-
-                // Let's update the logic for PLANNED (when onlyConsumed is false).
             }
         });
 
-        return { targets, consumed };
+        return { consumed, targets };
     };
 
     const getWeeklyWorkoutCount = () => {
@@ -995,16 +1152,68 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         return count;
     };
 
+    const getWeeklyDeficit = () => {
+        let totalBalance = 0;
+        const bmr = calculateBMR();
+        const today = new Date();
+        const todayKey = getDateKey(today);
+
+        if (deficitStartDate) {
+            // Forward Cycle: Sum TMB/Activity only for valid passed days
+            const [y, m, d] = deficitStartDate.split('-').map(Number);
+            const startDate = new Date(y, m - 1, d);
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                const dKey = getDateKey(date);
+
+                // Only count up to today (inclusive)
+                if (dKey > todayKey) continue;
+
+                const fitData = getGoogleFitDataForDate(dKey);
+                const consumed = getCaloriesForDate(dKey, true);
+
+                const totalFit = fitData.calories_burned || 0;
+                // Use Fit data if available, otherwise just BMR
+                const burned = totalFit > 0 ? totalFit : bmr;
+
+                // If it's today, totalFit might be active calories + BMR partial?
+                // Google Fit usually returns Total.
+                // Logic: Accumulate ONLY positive deficit (progress).
+                // If surplus (negative), it counts as 0 (no progress), pointer stops.
+                totalBalance += Math.max(0, burned - consumed);
+            }
+        } else {
+            // Standard: Last 7 days
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dKey = getDateKey(date);
+                const fitData = getGoogleFitDataForDate(dKey);
+                const consumed = getCaloriesForDate(dKey, true);
+
+                const totalFit = fitData.calories_burned || 0;
+                const extra = totalFit > bmr ? totalFit - bmr : 0;
+
+                totalBalance += Math.max(0, (bmr + extra) - consumed);
+            }
+        }
+
+        return Math.round(totalBalance);
+    };
+
     const selectedDayPlannedCalories = getCaloriesForDate(selectedDateKey, false);
-    const todayConsumedCalories = getCaloriesForDate(todayKey, true);
+    const displayConsumedCalories = getCaloriesForDate(selectedDateKey, true);
     const weeklyWorkoutsDone = getWeeklyWorkoutCount();
+    const weeklyDeficit = getWeeklyDeficit();
     const weeklyFrequencyTarget = user.workoutFrequency || 3;
-    const todayMacros = getDailyMacros(todayKey);
+    const displayMacros = getDailyMacros(selectedDateKey);
 
     // --- ACTIONS ---
 
     const toggleExercise = (dayName: string, exerciseName: string) => {
-        const key = `${dayName}-${exerciseName}`;
+        const key = `${dayName} -${exerciseName} `;
         const newSet = new Set(completedExercises);
         if (newSet.has(key)) newSet.delete(key);
         else newSet.add(key);
@@ -1012,11 +1221,34 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const handleSelectOption = (mealId: string, optionIndex: number) => {
-        const key = `${selectedDateKey}_${mealId}`;
+        const key = `${selectedDateKey}_${mealId} `;
         setMealSelections(prev => ({
             ...prev,
             [key]: optionIndex
         }));
+
+        // Reset customizations (dietHistory) and exclusions when switching options
+        // This ensures the user sees the fresh default ingredients of the new option
+        setDietHistory(prev => {
+            const dayLog = prev[selectedDateKey] || {};
+            // If we have customizations for this meal, remove them for this day
+            if (dayLog[mealId]) {
+                const newDayLog = { ...dayLog };
+                delete newDayLog[mealId];
+                return { ...prev, [selectedDateKey]: newDayLog };
+            }
+            return prev;
+        });
+
+        // Also clear exclusions
+        setExcludedIngredients(prev => {
+            if (prev[key]) {
+                const newEx = { ...prev };
+                delete newEx[key];
+                return newEx;
+            }
+            return prev;
+        });
     };
 
     const handleOpenFoodModal = (mealId: string) => {
@@ -1024,7 +1256,6 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         setFoodSearchTerm('');
         setFoodModalOpen(true);
     };
-
     const handleAddFood = (food: FoodItem) => {
         const targetDateKey = cameraTargetMealId ? todayKey : selectedDateKey;
         const targetMealId = cameraTargetMealId || currentMealIdForAdd;
@@ -1040,7 +1271,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             });
 
             if (cameraTargetMealId) {
-                const key = `${todayKey}_${cameraTargetMealId}`;
+                const key = `${todayKey}_${cameraTargetMealId} `;
                 const newConsumed = new Set(consumedMeals);
                 newConsumed.add(key);
                 setConsumedMeals(newConsumed);
@@ -1057,7 +1288,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         if (!newManualFood.name || !newManualFood.calories) return;
 
         const food: FoodItem = {
-            id: `manual-${Date.now()}`,
+            id: `manual - ${Date.now()} `,
             name: newManualFood.name,
             calories: Number(newManualFood.calories),
             protein: Number(newManualFood.protein) || 0,
@@ -1172,7 +1403,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     if (resultText) {
                         const data = JSON.parse(resultText);
                         const food: FoodItem = {
-                            id: `scanned-${Date.now()}`,
+                            id: `scanned - ${Date.now()} `,
                             name: data.name,
                             calories: data.calories,
                             protein: data.protein,
@@ -1257,7 +1488,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
         const newOption: MealOption = {
-            id: `custom-${Date.now()}`,
+            id: `custom - ${Date.now()} `,
             name: newOptionName,
             description: "Opção personalizada criada por você.",
             ingredients: currentItems.map(item => ({
@@ -1309,7 +1540,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const handleToggleIngredient = (mealId: string, ingredientIndex: number) => {
-        const key = `${selectedDateKey}_${mealId}`;
+        const key = `${selectedDateKey}_${mealId} `;
         setExcludedIngredients(prev => {
             const currentList = prev[key] || [];
             if (currentList.includes(ingredientIndex)) {
@@ -1364,6 +1595,48 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         window.print();
     };
 
+    const handleGenerate = () => {
+        setIsSmartImportModalOpen(true);
+    };
+
+    const handleSavePreferences = (newPreferences: string[]) => {
+        setFoodPreferences(newPreferences);
+        setIsFoodPreferencesModalOpen(false);
+
+        if (window.confirm("Deseja regenerar seu plano alimentar agora com base nas novas preferências?")) {
+            if (user) {
+                // IMPORTANT: We need to pass the NEW preferences to generatePlan because setState is async
+                // and user state update in useEffect might not have happened yet
+                const updatedUser = { ...user, foodPreferences: newPreferences };
+                try {
+                    const newPlan = generatePlan(updatedUser);
+
+                    // 1. Update Parent State (for good measure)
+                    onUpdatePlan(newPlan);
+
+                    // 2. EXPLICITLY Save to LocalStorage immediately (bypass prop delay)
+                    localStorage.setItem('fitcoach_plan', JSON.stringify(newPlan));
+                    localStorage.setItem('fitcoach_user', JSON.stringify(updatedUser)); // Save prefs too
+
+                    // 3. Clear all "modification" history
+                    localStorage.removeItem('fitcoach_history');
+                    localStorage.removeItem('fitcoach_excluded_ingredients');
+                    localStorage.removeItem('fitcoach_selections');
+                    localStorage.removeItem('fitcoach_custom_options');
+
+                    // 4. Reload after a brief moment to ensure writes complete
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+
+                } catch (error) {
+                    console.error("Error regenerating plan:", error);
+                    alert("Erro ao regenerar o plano. Tente novamente mais tarde.");
+                }
+            }
+        }
+    };
+
     const handleResetClick = () => {
         if (window.confirm("Deseja refazer sua avaliação? Isso apagará seu plano atual.")) {
             onReset();
@@ -1397,7 +1670,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             const peopleCount = savedInfo.householdSize;
 
             plan.nutrition.meals.forEach(meal => {
-                const selectionKey = `${dKey}_${meal.id}`;
+                const selectionKey = `${dKey}_${meal.id} `;
 
                 // LOGICA DE SELEÇÃO PADRÃO BASEADA NO DIA
                 let selectedIdx = mealSelections[selectionKey];
@@ -1416,7 +1689,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         const { value, unit } = parseIngredientAmount(ingredient.amount);
                         const totalValue = value * peopleCount;
 
-                        const mapKey = `${cleanName}__${unit}`;
+                        const mapKey = `${cleanName}__${unit} `;
 
                         if (!itemsMap[mapKey]) {
                             itemsMap[mapKey] = {
@@ -1447,11 +1720,11 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             if (qty >= 1000) return `${(qty / 1000).toFixed(1).replace('.0', '')} L`;
             return `${Math.ceil(qty)} ml`;
         }
-        return `${Math.ceil(qty)} ${unit}${qty > 1 && unit !== 'un' && !unit.endsWith('s') ? 's' : ''}`;
+        return `${Math.ceil(qty)} ${unit}${qty > 1 && unit !== 'un' && !unit.endsWith('s') ? 's' : ''} `;
     };
 
     const handleShare = async () => {
-        const activeList = calculatedShoppingList.filter(item => !checkedItems.has(`${item.name}__${item.unit}`));
+        const activeList = calculatedShoppingList.filter(item => !checkedItems.has(`${item.name}__${item.unit} `));
 
         if (activeList.length === 0) {
             alert("Sua lista de pendências está vazia!");
@@ -1467,9 +1740,9 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         }, {} as Record<string, typeof activeList>);
 
         Object.entries(grouped).forEach(([cat, items]: [string, any[]]) => {
-            text += `*${cat}*\n`;
+            text += `* ${cat}*\n`;
             items.forEach(item => {
-                text += `[ ] ${item.name} - ${formatShoppingQuantity(item.quantity, item.unit)}\n`;
+                text += `[] ${item.name} - ${formatShoppingQuantity(item.quantity, item.unit)} \n`;
             });
             text += "\n";
         });
@@ -1525,28 +1798,28 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         const points = data.map((d, i) => ({ x: getX(i), y: getY(d.value) }));
 
         // Bézier Curve Calculation (Catmull-Rom like)
-        let dPath = `M ${points[0].x} ${points[0].y}`;
+        let dPath = `M ${points[0].x} ${points[0].y} `;
         for (let i = 0; i < points.length - 1; i++) {
             const curr = points[i];
             const next = points[i + 1];
             const cp1x = curr.x + (next.x - curr.x) / 2;
-            dPath += ` C ${cp1x} ${curr.y}, ${cp1x} ${next.y}, ${next.x} ${next.y}`;
+            dPath += ` C ${cp1x} ${curr.y}, ${cp1x} ${next.y}, ${next.x} ${next.y} `;
         }
 
         const areaPath = `${dPath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
 
         return (
             <div className="relative group w-full h-full">
-                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                <svg viewBox={`0 0 ${width} ${height} `} className="w-full h-full overflow-visible">
                     <defs>
-                        <linearGradient id={`gradient-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id={`gradient - ${color.replace('#', '')} `} x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor={color} stopOpacity="0.3" />
                             <stop offset="100%" stopColor={color} stopOpacity="0" />
                         </linearGradient>
                     </defs>
 
                     {/* Area Gradient */}
-                    <path d={areaPath} fill={`url(#gradient-${color.replace('#', '')})`} />
+                    <path d={areaPath} fill={`url(#gradient - ${color.replace('#', '')})`} />
 
                     {/* Main Curve */}
                     <path
@@ -1865,16 +2138,42 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (!newMeasurement.weight) return;
-                                        const todayKey = getDateKey(new Date());
-                                        setWeightHistory(prev => ({ ...prev, [todayKey]: Number(newMeasurement.weight) }));
+                                        // Use selectedDateKey to respect the date navigation
+                                        const dateToSave = selectedDateKey || getDateKey(new Date());
+
+                                        // Optimistic UI Update first
+                                        setWeightHistory(prev => ({ ...prev, [dateToSave]: Number(newMeasurement.weight) }));
                                         if (newMeasurement.bodyFat) {
-                                            setBodyFatHistory(prev => ({ ...prev, [todayKey]: Number(newMeasurement.bodyFat) }));
+                                            setBodyFatHistory(prev => ({ ...prev, [dateToSave]: Number(newMeasurement.bodyFat) }));
                                         }
                                         if (newMeasurement.waist) {
-                                            setWaistHistory(prev => ({ ...prev, [todayKey]: Number(newMeasurement.waist) }));
+                                            setWaistHistory(prev => ({ ...prev, [dateToSave]: Number(newMeasurement.waist) }));
                                         }
+
+                                        // Persist to Supabase
+                                        try {
+                                            const payload: any = {
+                                                user_id: userId,
+                                                date: dateToSave,
+                                                weight: Number(newMeasurement.weight)
+                                            };
+                                            if (newMeasurement.bodyFat) payload.body_fat = Number(newMeasurement.bodyFat);
+                                            if (newMeasurement.waist) payload.waist = Number(newMeasurement.waist);
+
+                                            const { error } = await supabase
+                                                .from('user_measurements')
+                                                .upsert(payload, { onConflict: 'user_id,date' });
+
+                                            if (error) {
+                                                console.error("Error saving measurement to Supabase:", error);
+                                                alert("Erro ao salvar na nuvem, mas salvo localmente.");
+                                            }
+                                        } catch (err) {
+                                            console.error("Unexpected error saving measurement:", err);
+                                        }
+
                                         setIsMeasurementModalOpen(false);
                                         setNewMeasurement({ weight: '', bodyFat: '', waist: '' });
                                     }}
@@ -1891,39 +2190,157 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         );
     };
 
-    const renderOverview = () => {
-        const isWorkoutDoneToday = workoutLog.has(todayKey);
+    const renderDeficitBreakdownModal = () => {
+        if (!isDeficitBreakdownOpen) return null;
+
+        const bmr = calculateBMR();
+        const today = new Date();
+        const todayKey = getDateKey(today);
+        const days = [];
+
+        if (deficitStartDate) {
+            // Forward cycle: Start Date + 6 days
+            const [y, m, d] = deficitStartDate.split('-').map(Number);
+            const startDate = new Date(y, m - 1, d);
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                const dKey = getDateKey(date);
+
+                const isFuture = dKey > todayKey;
+
+                if (isFuture) {
+                    days.push({ date, dKey, bmr, extra: 0, consumed: 0, balance: bmr, isFuture: true });
+                } else {
+                    const fitData = getGoogleFitDataForDate(dKey);
+                    const consumed = getCaloriesForDate(dKey, true);
+                    const totalFit = fitData.calories_burned || 0;
+                    const extra = totalFit > bmr ? totalFit - bmr : 0;
+                    const balance = (bmr + extra) - consumed;
+                    days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
+                }
+            }
+        } else {
+            // Standard: Last 7 days
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dKey = getDateKey(date);
+                const fitData = getGoogleFitDataForDate(dKey);
+                const consumed = getCaloriesForDate(dKey, true);
+                const totalFit = fitData.calories_burned || 0;
+                const extra = totalFit > bmr ? totalFit - bmr : 0;
+                const balance = (bmr + extra) - consumed;
+                days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
+            }
+        }
 
         return (
-            <div className="space-y-6 animate-in fade-in duration-300 pb-20">
-                {/* UNDO BUTTON IN OVERVIEW */}
-                {backupPlan && (
-                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between shadow-sm border-l-4 border-l-orange-500">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-orange-100 p-2 rounded-full">
-                                <RefreshCw className="w-5 h-5 text-orange-600 animate-spin-slow" />
-                            </div>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-brand-600 p-6 text-white relative">
+                        <button
+                            onClick={() => setIsDeficitBreakdownOpen(false)}
+                            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <h2 className="text-xl font-black flex items-center gap-2">
+                            <TrendingUp className="w-6 h-6" />
+                            Resumo de Déficit
+                        </h2>
+                        <p className="text-brand-100 text-sm mt-1">
+                            {deficitStartDate
+                                ? `Ciclo de 7 dias (Início: ${new Date(Number(deficitStartDate.split('-')[0]), Number(deficitStartDate.split('-')[1]) - 1, Number(deficitStartDate.split('-')[2])).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })})`
+                                : "Últimos 7 dias acumulados"
+                            }
+                        </p>
+                    </div>
+
+                    <div className="p-4 max-h-[60vh] overflow-y-auto">
+                        <div className="space-y-3">
+                            {days.map((day, idx) => {
+                                return (
+                                    <div key={day.dKey} className={`rounded-2xl p-4 border ${day.dKey === todayKey ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-gray-50 border-gray-100'} ${day.isFuture ? 'opacity-70 bg-gray-50/50 dashed-border' : ''}`}>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex flex-col">
+                                                <h3 className={`font-bold ${day.dKey === todayKey ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                    {day.date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}
+                                                    {day.dKey === todayKey && " (Hoje)"}
+                                                </h3>
+                                                {day.isFuture && <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Projeção (TMB)</span>}
+                                            </div>
+                                            <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${day.balance >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {day.balance >= 0 ? `+${day.balance} kcal` : `${day.balance} kcal`}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="text-center">
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase">TMB</p>
+                                                <p className="text-xs font-bold text-gray-700">{day.bmr}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase">Atividade</p>
+                                                <p className="text-xs font-bold text-gray-700">+{day.extra}</p>
+                                            </div>
+                                            <div className="text-center border-l border-gray-200">
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase">Consumo</p>
+                                                <p className="text-xs font-black text-orange-600">-{day.consumed}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="p-6 bg-gray-50 border-t border-gray-100">
+                        <div className="flex justify-between items-center mb-4">
                             <div>
-                                <h4 className="text-sm font-bold text-orange-900">Plano Alternativo Ativo</h4>
-                                <p className="text-[10px] text-orange-700">Você pode voltar ao plano original a qualquer momento.</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase">Saldo Semanal</p>
+                                <p className="text-2xl font-black text-brand-600">{weeklyDeficit} kcal</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-bold text-gray-400 uppercase">Queima Estimada</p>
+                                <p className="text-lg font-black text-gray-800">
+                                    {(weeklyDeficit / 7700).toFixed(2)} kg
+                                </p>
                             </div>
                         </div>
                         <button
-                            onClick={undoImport}
-                            className="bg-white text-orange-700 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm border border-orange-100 active:scale-95 transition-all"
+                            onClick={() => setIsDeficitBreakdownOpen(false)}
+                            className="w-full py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 transition-transform active:scale-[0.98]"
                         >
-                            Restaurar
+                            Fechar Resumo
                         </button>
                     </div>
-                )}
+                </div>
+            </div>
+        );
+    };
 
+    const renderOverview = () => {
+        const displayWorkoutDone = workoutLog.has(selectedDateKey);
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-300 pb-20">
                 {/* COMPACT ACTIVITY ROW (GOOGLE FIT) */}
                 {googleFitData.length > 0 && (
                     <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-4">
                         {(() => {
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
-                            const totalExpended = bmr + todayData.calories_burned;
+                            const googleFitTotal = todayData.calories_burned || 0;
+
+                            // If we have Google Fit data, use it as the source of truth for Total.
+                            // If it's less than BMR (e.g. start of day), fallback to BMR.
+                            const totalExpended = googleFitTotal > 0 ? Math.max(googleFitTotal, bmr) : bmr;
+
+                            // Calculate "Active" portion for display
+                            const activeCalories = Math.max(0, totalExpended - bmr);
+
                             const stepsGoal = 10000;
                             const stepsProgress = Math.min((todayData.steps / stepsGoal) * 100, 100);
 
@@ -1945,7 +2362,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atividade</p>
-                                            <p className="text-sm font-black text-gray-800">{todayData.calories_burned}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
+                                            <p className="text-sm font-black text-gray-800">{activeCalories}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
                                         </div>
                                     </div>
 
@@ -1967,49 +2384,91 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
 
                 {/* HEADER GAUGES */}
                 <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
-                    <h2 className="text-lg font-bold text-gray-800 mb-6 text-center">Resumo da Semana</h2>
+                    {/* Date Navigator in Dashboard */}
+                    <div className="flex items-center justify-between mb-6 px-2">
+                        <button onClick={() => {
+                            const d = new Date(selectedDate);
+                            d.setDate(d.getDate() - 1);
+                            setSelectedDate(d);
+                        }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <ChevronLeft className="w-5 h-5 text-gray-400" />
+                        </button>
+
+                        <div className="text-center">
+                            <h2 className="text-lg font-bold text-gray-800">
+                                {selectedDateKey === todayKey ? 'Resumo de Hoje' : `Resumo de ${selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} `}
+                            </h2>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Histórico e Controle</p>
+                        </div>
+
+                        <button onClick={() => {
+                            const d = new Date(selectedDate);
+                            d.setDate(d.getDate() + 1);
+                            setSelectedDate(d);
+                        }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </button>
+                    </div>
+
                     <div className="flex justify-around items-center">
 
-                        {/* GAUGE CALORIAS */}
-                        <ModernGauge
-                            value={todayConsumedCalories}
-                            max={plan.nutrition?.targetCalories || 2000}
-                            type="calories"
-                            label="Calorias (Hoje)"
-                            suffix="kcal"
-                            icon={<Flame className="w-5 h-5 text-orange-500" />}
-                        />
+                        <div className="relative">
+                            <ModernGauge
+                                value={displayConsumedCalories}
+                                max={customTargets.calories}
+                                type="calories"
+                                label={selectedDateKey === todayKey ? "Calorias (Hoje)" : "Calorias (Dia)"}
+                                suffix="kcal"
+                                icon={<Flame className="w-5 h-5 text-orange-500" />}
+                            />
+                            <button
+                                onClick={() => setIsGoalsModalOpen(true)}
+                                className="absolute top-2 right-2 bg-orange-50 hover:bg-orange-100 text-orange-600 p-1.5 rounded-lg transition-colors"
+                                title="Editar metas de nutrição"
+                            >
+                                <Settings2 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
 
-                        {/* GAUGE DÉFICIT CALÓRICO */}
-                        {(() => {
-                            const todayData = getGoogleFitDataForDate(todayKey);
-                            const bmr = calculateBMR();
-                            const totalExpended = bmr + todayData.calories_burned;
-                            // Only show deficit if user has consumed calories
-                            const actualDeficit = todayConsumedCalories > 0
-                                ? totalExpended - todayConsumedCalories
-                                : 0;
-
-                            return (
-                                <div className="relative">
-                                    <ModernGauge
-                                        value={actualDeficit}
-                                        max={deficitGoal}
-                                        type="deficit"
-                                        label="Déficit (Hoje)"
-                                        suffix="kcal"
-                                        icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
-                                    />
+                        <div className="relative group">
+                            <div
+                                onClick={() => setIsDeficitBreakdownOpen(true)}
+                                className="cursor-pointer transition-transform hover:scale-[1.02]"
+                            >
+                                <ModernGauge
+                                    value={Math.max(0, weeklyDeficit)}
+                                    max={7700}
+                                    type="deficit"
+                                    label={deficitStartDate ? "Déficit Acumulado" : "Déficit Semanal"}
+                                    suffix="kcal"
+                                    icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
+                                />
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <div className="bg-blue-50 text-[9px] font-bold text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1 mt-1">
+                                    Meta 1kg
                                     <button
-                                        onClick={() => setIsDeficitModalOpen(true)}
-                                        className="absolute top-2 right-2 bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors"
-                                        title="Editar meta de deficit"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            alert("Cálculo Estimado:\n7.700 kcal acumuladas equivalem a aproximadamente 1kg de gordura corporal (Regra de Wishnofsky).\n\nEste valor é uma estimativa científica e pode variar dependendo do metabolismo individual, composição corporal e outros fatores biológicos.");
+                                        }}
+                                        className="hover:text-blue-800"
                                     >
-                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <Info className="w-3 h-3" />
                                     </button>
                                 </div>
-                            );
-                        })()}
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDeficitModalOpen(true);
+                                }}
+                                className="absolute top-2 right-2 bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors z-10"
+                                title="Editar meta de deficit"
+                            >
+                                <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2019,7 +2478,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm h-full">
                             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <Droplets className="w-5 h-5 text-blue-500" />
-                                Macronutrientes (Hoje)
+                                Macronutrientes ({selectedDateKey === todayKey ? 'Hoje' : 'Dia'})
                             </h3>
 
                             <div className="space-y-4">
@@ -2030,13 +2489,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                             <Beef className="w-3.5 h-3.5" /> Proteínas
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.protein)}</span> / {todayMacros.targets.protein}g
+                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.protein)}</span> / {displayMacros.targets.protein}g
                                         </div>
                                     </div>
                                     <div className="h-2 w-full bg-indigo-50 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-indigo-500 rounded-full transition-all duration-700"
-                                            style={{ width: `${Math.min((todayMacros.consumed.protein / todayMacros.targets.protein) * 100, 100)}%` }}
+                                            style={{ width: `${Math.min((displayMacros.consumed.protein / displayMacros.targets.protein) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
                                 </div>
@@ -2048,13 +2507,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                             <Wheat className="w-3.5 h-3.5" /> Carboidratos
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.carbs)}</span> / {todayMacros.targets.carbs}g
+                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.carbs)}</span> / {displayMacros.targets.carbs}g
                                         </div>
                                     </div>
                                     <div className="h-2 w-full bg-amber-50 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                                            style={{ width: `${Math.min((todayMacros.consumed.carbs / todayMacros.targets.carbs) * 100, 100)}%` }}
+                                            style={{ width: `${Math.min((displayMacros.consumed.carbs / displayMacros.targets.carbs) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
                                 </div>
@@ -2066,13 +2525,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                             <Droplets className="w-3.5 h-3.5" /> Gorduras
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.fats)}</span> / {todayMacros.targets.fats}g
+                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.fats)}</span> / {displayMacros.targets.fats}g
                                         </div>
                                     </div>
                                     <div className="h-2 w-full bg-rose-50 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-rose-500 rounded-full transition-all duration-700"
-                                            style={{ width: `${Math.min((todayMacros.consumed.fats / todayMacros.targets.fats) * 100, 100)}%` }}
+                                            style={{ width: `${Math.min((displayMacros.consumed.fats / displayMacros.targets.fats) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
                                 </div>
@@ -2090,22 +2549,26 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => startCamera(null, 'log')}
-                                    className="flex flex-col items-center justify-center p-4 bg-orange-50 border border-orange-100 rounded-xl hover:bg-orange-100 transition-colors group"
+                                    className="flex flex-col items-center justify-center p-4 bg-orange-50/50 border border-orange-100 rounded-2xl hover:bg-orange-100/50 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
                                 >
-                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-orange-100 mb-2 group-hover:scale-110 transition-transform">
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-orange-200/20 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                    <div className="bg-gradient-to-br from-white to-orange-50 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(249,115,22,0.3)] border border-orange-100 mb-3 group-hover:scale-110 transition-transform">
                                         <Camera className="w-6 h-6 text-orange-600" />
                                     </div>
-                                    <span className="text-xs font-bold text-orange-900">AI Food Analysis</span>
+                                    <span className="text-xs font-black text-orange-900 uppercase tracking-tight">Análise IA</span>
+                                    <span className="text-[9px] text-orange-600/70 font-bold">Foto de Comida</span>
                                 </button>
 
                                 <button
-                                    onClick={fetchGoogleFitData}
-                                    className="flex flex-col items-center justify-center p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors group"
+                                    onClick={handleGoogleFitImport}
+                                    className="flex flex-col items-center justify-center p-4 bg-blue-50/50 border border-blue-100 rounded-2xl hover:bg-blue-100/50 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
                                 >
-                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-blue-100 mb-2 group-hover:scale-110 transition-transform">
-                                        <RefreshCw className={`w-6 h-6 text-blue-600 ${loadingGoogleFitData ? 'animate-spin' : ''}`} />
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200/20 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                    <div className="bg-gradient-to-br from-white to-blue-50 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(59,130,246,0.3)] border border-blue-100 mb-3 group-hover:scale-110 transition-transform">
+                                        <RefreshCw className={`w-6 h-6 text-blue-600 ${(loadingGoogleFitData || importingGoogleFit) ? 'animate-spin' : ''}`} />
                                     </div>
-                                    <span className="text-xs font-bold text-blue-900">Sync Smartwatch</span>
+                                    <span className="text-xs font-black text-blue-900 uppercase tracking-tight">Sincronizar</span>
+                                    <span className="text-[9px] text-blue-600/70 font-bold">Smartwatch</span>
                                 </button>
                             </div>
                         </div>
@@ -2114,11 +2577,11 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                             <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
                                 <Utensils className="w-4 h-4 text-orange-500" />
-                                Refeições de Hoje
+                                Refeições de {selectedDateKey === todayKey ? 'Hoje' : selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                             </h3>
                             <div className="space-y-2">
                                 {(plan.nutrition?.meals || []).map(meal => {
-                                    const key = `${todayKey}_${meal.id}`;
+                                    const key = `${selectedDateKey}_${meal.id} `;
                                     const isDone = consumedMeals.has(key);
                                     return (
                                         <button
@@ -2129,8 +2592,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                                 else newConsumed.add(key);
                                                 setConsumedMeals(newConsumed);
                                             }}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${isDone ? 'bg-green-50 border-green-200 opacity-75' : 'bg-white border-gray-100 hover:border-orange-200'
-                                                }`}
+                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${isDone ? 'bg-green-50 border-green-200 opacity-75' : 'bg-white border-gray-100 hover:border-orange-200'}`}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200'}`}>
@@ -2154,23 +2616,22 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             <button
                                 onClick={() => {
                                     const newLog = new Set(workoutLog);
-                                    if (isWorkoutDoneToday) newLog.delete(todayKey);
-                                    else newLog.add(todayKey);
+                                    if (displayWorkoutDone) newLog.delete(selectedDateKey);
+                                    else newLog.add(selectedDateKey);
                                     setWorkoutLog(newLog);
                                 }}
-                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${isWorkoutDoneToday ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-100 hover:border-brand-200'
-                                    }`}
+                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${displayWorkoutDone ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-100 hover:border-brand-200'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isWorkoutDoneToday ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-200 text-transparent'}`}>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${displayWorkoutDone ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-200 text-transparent'}`}>
                                         <Check className="w-4 h-4" />
                                     </div>
                                     <div className="text-left">
-                                        <p className={`text-sm font-bold ${isWorkoutDoneToday ? 'text-brand-900' : 'text-gray-800'}`}>{todayWorkout.focus}</p>
+                                        <p className={`text-sm font-bold ${displayWorkoutDone ? 'text-brand-900' : 'text-gray-800'}`}>{todayWorkout.focus}</p>
                                         <p className="text-[10px] text-gray-500">{(todayWorkout.exercises || []).length} exercícios planejados</p>
                                     </div>
                                 </div>
-                                {!isWorkoutDoneToday && (
+                                {!displayWorkoutDone && (
                                     <div className="bg-brand-100 text-brand-600 p-2 rounded-lg">
                                         <Zap className="w-4 h-4" />
                                     </div>
@@ -2200,7 +2661,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -2251,13 +2712,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                 const isCustomized = !!customWorkouts[session.dayName];
 
                 return (
-                    <div key={session.dayName} className={`bg-white rounded-xl border transition-all duration-300 ${isExpanded ? 'border-brand-500 shadow-md' : 'border-gray-200'}`}>
+                    <div key={session.dayName} className={`bg - white rounded - xl border transition - all duration - 300 ${isExpanded ? 'border-brand-500 shadow-md' : 'border-gray-200'} `}>
                         <button
                             onClick={() => setExpandedDay(isExpanded ? null : session.dayName)}
                             className="w-full flex items-center justify-between p-4"
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${isToday ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>
+                                <div className={`p - 2 rounded - lg ${isToday ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'} `}>
                                     <CalendarDays className="w-5 h-5" />
                                 </div>
                                 <div className="text-left">
@@ -2278,20 +2739,20 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                 ) : (
                                     <div className="space-y-3">
                                         {displayExercises.map((ex, i) => {
-                                            const key = `${session.dayName}-${ex.name}`;
+                                            const key = `${session.dayName} -${ex.name} `;
                                             const isDone = completedExercises.has(key);
                                             return (
                                                 <div key={i} className="flex gap-3 items-start group">
                                                     <button
                                                         onClick={() => toggleExercise(session.dayName, ex.name)}
-                                                        className={`mt-1 flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-brand-400'
-                                                            }`}
+                                                        className={`mt - 1 flex - shrink - 0 w - 6 h - 6 rounded border - 2 flex items - center justify - center transition - colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-brand-400'
+                                                            } `}
                                                     >
                                                         {isDone && <Check className="w-4 h-4 text-white" />}
                                                     </button>
-                                                    <div className={`flex-1 ${isDone ? 'opacity-50' : ''}`}>
+                                                    <div className={`flex - 1 ${isDone ? 'opacity-50' : ''} `}>
                                                         <div className="flex justify-between items-start">
-                                                            <p className={`font-bold text-sm ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>{ex.name}</p>
+                                                            <p className={`font - bold text - sm ${isDone ? 'line-through text-gray-400' : 'text-gray-800'} `}>{ex.name}</p>
                                                             <button
                                                                 onClick={(e) => handleRemoveExercise(session.dayName, i, e)}
                                                                 className="text-gray-300 hover:text-red-500 p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
@@ -2301,7 +2762,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                                             </button>
                                                         </div>
                                                         <p className="text-xs text-gray-500">
-                                                            {ex.sets}x {ex.reps} {ex.rest && `| ⏳ ${ex.rest}`}
+                                                            {ex.sets}x {ex.reps} {ex.rest && `| ⏳ ${ex.rest} `}
                                                         </p>
                                                         {ex.notes && <p className="text-xs text-amber-600 mt-0.5">💡 {ex.notes}</p>}
                                                     </div>
@@ -2398,6 +2859,23 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </button>
                 </div>
 
+                {/* Diet Actions Toolbar */}
+                <div className="flex justify-end gap-2 px-1">
+                    <button
+                        onClick={() => setIsFoodPreferencesModalOpen(true)}
+                        className="bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-orange-200 transition-colors shadow-sm"
+                    >
+                        <Carrot className="w-3.5 h-3.5" /> Personalizar Paladar
+                    </button>
+                    <button
+                        onClick={() => setIsGoalsModalOpen(true)}
+                        className="bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                        <Settings2 className="w-3.5 h-3.5" /> Editar Metas
+                    </button>
+
+                </div>
+
                 {/* Daily Summary */}
                 <div className="bg-brand-50 rounded-xl p-4 border border-brand-100">
                     <div className="flex justify-between items-center mb-2">
@@ -2433,17 +2911,21 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             <Utensils className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                             <p className="text-gray-500 font-medium italic">Nenhuma refeição encontrada neste plano.</p>
                             {backupPlan && (
-                                <button
-                                    onClick={undoImport}
-                                    className="mt-4 px-6 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md"
-                                >
-                                    Clique para Restaurar Plano Anterior
-                                </button>
+                                <div className="flex flex-col items-center gap-4 mt-4">
+                                    <button
+                                        onClick={undoImport}
+                                        className="px-6 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md"
+                                    >
+                                        Clique para Restaurar Plano Anterior
+                                    </button>
+                                    <div className="flex gap-2">
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}
                     {(plan.nutrition?.meals || []).map(meal => {
-                        const selectionKey = `${selectedDateKey}_${meal.id}`;
+                        const selectionKey = `${selectedDateKey}_${meal.id} `;
 
                         // --- AUTO ROTATION LOGIC ---
                         let selectedOptionIndex = mealSelections[selectionKey];
@@ -2457,7 +2939,9 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
 
                         // Check if customized items exist for this day/meal
                         const customItems = dietHistory[selectedDateKey]?.[meal.id];
-                        const displayItems = customItems || selectedOption?.ingredients || [];
+                        // Fix: treat empty array as "not customized" to match calorie logic
+                        const hasCustomItems = customItems && customItems.length > 0;
+                        const displayItems = hasCustomItems ? customItems : (selectedOption?.ingredients || []);
 
                         const isExpanded = expandedMeal === meal.id;
 
@@ -2468,12 +2952,23 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                     onClick={() => setExpandedMeal(isExpanded ? null : meal.id)}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
-                                            <Apple className="w-5 h-5 text-brand-500" />
-                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const key = `${selectedDateKey}_${meal.id} `;
+                                                const isDone = consumedMeals.has(key);
+                                                const newConsumed = new Set(consumedMeals);
+                                                if (isDone) newConsumed.delete(key);
+                                                else newConsumed.add(key);
+                                                setConsumedMeals(newConsumed);
+                                            }}
+                                            className={`w - 8 h - 8 rounded - lg border - 2 flex items - center justify - center transition - all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent hover:border-brand-300'} `}
+                                        >
+                                            <Check className="w-5 h-5" />
+                                        </button>
                                         <div>
-                                            <h4 className="font-bold text-gray-900">{meal.name}</h4>
-                                            {meal.time} • {getComputedMealCalories(meal, selectedDateKey)} kcal
+                                            <h4 className={`font - bold transition - all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'text-green-700 line-through opacity-70' : 'text-gray-900'} `}>{meal.name}</h4>
+                                            <span className="text-xs text-gray-500 font-medium">{meal.time} • {getComputedMealCalories(meal, selectedDateKey)} kcal</span>
                                         </div>
                                     </div>
                                     {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -2484,6 +2979,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                         {/* Option Selector */}
                                         <div className="mb-4">
                                             <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Opção do Cardápio</label>
+
                                             <select
                                                 value={selectedOptionIndex}
                                                 onChange={(e) => handleSelectOption(meal.id, Number(e.target.value))}
@@ -2499,20 +2995,20 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                         {/* Ingredients List */}
                                         <div className="space-y-2 mb-4">
                                             {displayItems.map((item, idx) => {
-                                                const isExcluded = (excludedIngredients[`${selectedDateKey}_${meal.id}`] || []).includes(idx) && !customItems;
+                                                const isExcluded = (excludedIngredients[`${selectedDateKey}_${meal.id} `] || []).includes(idx) && !customItems;
 
                                                 return (
                                                     <div
                                                         key={idx}
-                                                        className={`flex justify-between items-center text-sm p-2 rounded border border-gray-100 transition-all cursor-pointer ${isExcluded ? 'bg-gray-100 opacity-60' : 'bg-gray-50 hover:bg-gray-100'
-                                                            }`}
-                                                        onClick={() => !customItems && handleToggleIngredient(meal.id, idx)}
-                                                        title={customItems ? "" : "Clique para riscar/incluir este item"}
+                                                        className={`flex justify - between items - center text - sm p - 2 rounded border border - gray - 100 transition - all cursor - pointer ${isExcluded ? 'bg-gray-100 opacity-60' : 'bg-gray-50 hover:bg-gray-100'
+                                                            } `}
+                                                        onClick={() => !hasCustomItems && handleToggleIngredient(meal.id, idx)}
+                                                        title={hasCustomItems ? "" : "Clique para riscar/incluir este item"}
                                                     >
-                                                        <span className={`text-gray-700 ${isExcluded ? 'line-through text-gray-400' : ''}`}>
+                                                        <span className={`text - gray - 700 ${isExcluded ? 'line-through text-gray-400' : ''} `}>
                                                             <span className="font-bold">{(item as FoodItem).portion || (item as any).amount}</span> {(item as FoodItem).name || (item as any).name}
                                                         </span>
-                                                        {customItems && (
+                                                        {hasCustomItems && (
                                                             <button onClick={(e) => { e.stopPropagation(); handleRemoveFood(meal.id, idx); }} className="text-red-400 hover:text-red-600 p-1">
                                                                 <X className="w-4 h-4" />
                                                             </button>
@@ -2572,8 +3068,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     };
 
     const renderShopping = () => {
-        const activeItems = calculatedShoppingList.filter(i => !checkedItems.has(`${i.name}__${i.unit}`));
-        const completedItemsList = calculatedShoppingList.filter(i => checkedItems.has(`${i.name}__${i.unit}`));
+        const activeItems = calculatedShoppingList.filter(i => !checkedItems.has(`${i.name}__${i.unit} `));
+        const completedItemsList = calculatedShoppingList.filter(i => checkedItems.has(`${i.name}__${i.unit} `));
 
         // REMOVIDO: O bloco "if (calculatedShoppingList.length === 0)" que retornava cedo demais.
         // Agora renderizamos o Header Card primeiro e depois verificamos se a lista está vazia.
@@ -2645,9 +3141,9 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             </div>
 
                             {activeItems.map((item, idx) => {
-                                const key = `${item.name}__${item.unit}`;
+                                const key = `${item.name}__${item.unit} `;
                                 return (
-                                    <div key={key} className={`flex items-center p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors`}>
+                                    <div key={key} className={`flex items - center p - 4 border - b border - gray - 100 last: border - 0 hover: bg - gray - 50 transition - colors`}>
                                         <button
                                             onClick={() => handleToggleShoppingItem(key)}
                                             className="w-6 h-6 rounded border-2 border-gray-300 mr-4 flex items-center justify-center text-white hover:border-brand-400"
@@ -2679,7 +3175,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                 {showCompletedItems && (
                                     <div className="bg-gray-50/50">
                                         {completedItemsList.map((item) => {
-                                            const key = `${item.name}__${item.unit}`;
+                                            const key = `${item.name}__${item.unit} `;
                                             return (
                                                 <div key={key} className="flex items-center p-4 border-t border-gray-100 opacity-60">
                                                     <button
@@ -2775,7 +3271,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     <button onClick={() => setCalendarMode('menu')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 flex items-center gap-1 text-sm font-bold">
                         <ArrowLeft className="w-4 h-4" /> Voltar
                     </button>
-                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${isDiet ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-700'}`}>
+                    <span className={`text - xs font - bold px - 2 py - 1 rounded uppercase ${isDiet ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-700'} `}>
                         {isDiet ? 'Calendário de Dieta' : 'Calendário de Treinos'}
                     </span>
                 </div>
@@ -2808,7 +3304,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     {/* Days Grid */}
                     <div className="grid grid-cols-7 gap-1">
                         {blanks.map((_, i) => (
-                            <div key={`blank-${i}`} className="h-10"></div>
+                            <div key={`blank - ${i} `} className="h-10"></div>
                         ))}
 
                         {days.map(day => {
@@ -2848,14 +3344,14 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                             setActiveTab('diet');
                                         }
                                     }}
-                                    className={`h-12 rounded-lg flex flex-col items-center justify-center relative transition-all border 
+                                    className={`h - 12 rounded - lg flex flex - col items - center justify - center relative transition - all border 
                     ${isToday ? 'ring-1 ring-brand-100 font-bold' : ''}
                     ${isSelected ? (isDiet ? 'border-orange-500 bg-orange-50' : 'border-brand-500 bg-brand-50') : 'border-transparent hover:bg-gray-50'}
                     ${!isDiet && workoutLog.has(dKey) && !isSelected ? 'bg-green-50/50' : ''}
-                    text-gray-700
-                  `}
+text - gray - 700
+    `}
                                 >
-                                    <span className={`z-10 ${statusIndicator ? 'mb-2' : ''}`}>{day}</span>
+                                    <span className={`z - 10 ${statusIndicator ? 'mb-2' : ''} `}>{day}</span>
                                     {statusIndicator}
                                 </button>
                             );
@@ -2863,8 +3359,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </div>
                 </div>
 
-                <div className={`p-4 rounded-xl border ${isDiet ? 'bg-orange-50 border-orange-100' : 'bg-brand-50 border-brand-100'}`}>
-                    <h4 className={`font-bold text-sm mb-2 flex items-center gap-2 ${isDiet ? 'text-orange-800' : 'text-brand-800'}`}>
+                <div className={`p - 4 rounded - xl border ${isDiet ? 'bg-orange-50 border-orange-100' : 'bg-brand-50 border-brand-100'} `}>
+                    <h4 className={`font - bold text - sm mb - 2 flex items - center gap - 2 ${isDiet ? 'text-orange-800' : 'text-brand-800'} `}>
                         <CalendarRange className="w-4 h-4" />
                         Legenda
                     </h4>
@@ -3091,8 +3587,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                                     onChange={e => setImportDietSelected(e.target.checked)}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w-10 h-6 rounded-full transition-colors ${importDietSelected ? 'bg-brand-600' : 'bg-gray-300'}`}></div>
-                                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${importDietSelected ? 'translate-x-4' : ''}`}></div>
+                                                <div className={`w - 10 h - 6 rounded - full transition - colors ${importDietSelected ? 'bg-brand-600' : 'bg-gray-300'} `}></div>
+                                                <div className={`absolute top - 1 left - 1 bg - white w - 4 h - 4 rounded - full transition - transform ${importDietSelected ? 'translate-x-4' : ''} `}></div>
                                             </div>
                                             <div>
                                                 <span className="text-sm font-bold text-gray-800">Importar Dieta</span>
@@ -3108,8 +3604,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                                     onChange={e => setImportWorkoutSelected(e.target.checked)}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w-10 h-6 rounded-full transition-colors ${importWorkoutSelected ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
-                                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${importWorkoutSelected ? 'translate-x-4' : ''}`}></div>
+                                                <div className={`w - 10 h - 6 rounded - full transition - colors ${importWorkoutSelected ? 'bg-indigo-600' : 'bg-gray-300'} `}></div>
+                                                <div className={`absolute top - 1 left - 1 bg - white w - 4 h - 4 rounded - full transition - transform ${importWorkoutSelected ? 'translate-x-4' : ''} `}></div>
                                             </div>
                                             <div>
                                                 <span className="text-sm font-bold text-gray-800">Importar Treino</span>
@@ -3197,13 +3693,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex flex-col items-center gap-1 p-2 transition-all duration-300 ${isActive ? 'text-brand-600 -translate-y-2' : 'text-gray-400'
-                                }`}
+                            className={`flex flex - col items - center gap - 1 p - 2 transition - all duration - 300 ${isActive ? 'text-brand-600 -translate-y-2' : 'text-gray-400'
+                                } `}
                         >
-                            <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-brand-50 shadow-brand-100 shadow-md' : 'bg-transparent'}`}>
-                                <Icon className={`w-5 h-5 ${isActive ? 'fill-current' : ''}`} />
+                            <div className={`p - 2 rounded - xl transition - all ${isActive ? 'bg-brand-50 shadow-brand-100 shadow-md' : 'bg-transparent'} `}>
+                                <Icon className={`w - 5 h - 5 ${isActive ? 'fill-current' : ''} `} />
                             </div>
-                            <span className={`text-[9px] font-bold ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{tab.label}</span>
+                            <span className={`text - [9px] font - bold ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'} `}>{tab.label}</span>
                         </button>
                     )
                 })}
@@ -3238,10 +3734,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                 <button
                                     key={m.id}
                                     onClick={() => setCurrentMealIdForAdd(m.id)}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${currentMealIdForAdd === m.id
+                                    className={`px - 3 py - 1 rounded - full text - xs font - bold whitespace - nowrap transition - all ${currentMealIdForAdd === m.id
                                         ? 'bg-brand-600 text-white shadow-sm'
                                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                        }`}
+                                        } `}
                                 >
                                     {m.name}
                                 </button>
@@ -3250,15 +3746,15 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         <div className="flex p-1 bg-gray-100 rounded-lg mx-4 mb-2">
                             <button
                                 onClick={() => setFoodModalMode('library')}
-                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    }`}
+                                className={`flex - 1 py - 1.5 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${foodModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
+                                    } `}
                             >
                                 <Search className="w-3.5 h-3.5" /> Buscar
                             </button>
                             <button
                                 onClick={() => setFoodModalMode('manual')}
-                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    }`}
+                                className={`flex - 1 py - 1.5 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${foodModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
+                                    } `}
                             >
                                 <Edit3 className="w-3.5 h-3.5" /> Manual
                             </button>
@@ -3444,10 +3940,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                         <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider bg-green-50 px-2 py-1 rounded-full border border-green-100">Resultado da Análise</span>
                                         <h3 className="font-bold text-2xl text-gray-900 mt-2">{fruitAnalysis.name}</h3>
                                     </div>
-                                    <div className={`text-center px-3 py-2 rounded-lg ${fruitAnalysis.quality === 'Excelente' || fruitAnalysis.quality === 'Boa'
+                                    <div className={`text - center px - 3 py - 2 rounded - lg ${fruitAnalysis.quality === 'Excelente' || fruitAnalysis.quality === 'Boa'
                                         ? 'bg-green-500 text-white'
                                         : 'bg-red-100 text-red-600'
-                                        }`}>
+                                        } `}>
                                         <span className="block font-black text-sm">{fruitAnalysis.quality}</span>
                                     </div>
                                 </div>
@@ -3497,15 +3993,15 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
                             <button
                                 onClick={() => setExerciseModalMode('library')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    }`}
+                                className={`flex - 1 py - 2 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${exerciseModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
+                                    } `}
                             >
                                 <BookOpen className="w-4 h-4" /> Biblioteca
                             </button>
                             <button
                                 onClick={() => setExerciseModalMode('manual')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    }`}
+                                className={`flex - 1 py - 2 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${exerciseModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
+                                    } `}
                             >
                                 <Edit3 className="w-4 h-4" /> Manual
                             </button>
@@ -3530,10 +4026,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                             <button
                                                 key={group}
                                                 onClick={() => setSelectedMuscleGroup(group)}
-                                                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedMuscleGroup === group
+                                                className={`px - 3 py - 1 rounded - full text - xs font - bold whitespace - nowrap transition - colors ${selectedMuscleGroup === group
                                                     ? 'bg-brand-100 text-brand-700 border border-brand-200'
                                                     : 'bg-gray-50 text-gray-500 border border-gray-200'
-                                                    }`}
+                                                    } `}
                                             >
                                                 {group}
                                             </button>
@@ -3710,41 +4206,49 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             <TrendingUp className="w-6 h-6 text-blue-600" />
                             Meta de Déficit Calórico
                         </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                            Defina quantas calorias você quer queimar a mais do que consome por dia.
-                        </p>
+                        <h3 className="font-bold text-xl text-gray-800 mb-2 text-center">Meta de Déficit Semanal</h3>
+                        <p className="text-xs text-gray-500 text-center mb-6 px-4">Defina o acúmulo de queima calórica que você deseja alcançar nos últimos 7 dias.</p>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-3">Déficit Diário (kcal)</label>
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setDeficitGoal(Math.max(100, deficitGoal - 50))}
-                                    className="w-12 h-12 rounded-full border-2 border-blue-200 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
-                                >
-                                    <span className="text-2xl font-bold text-blue-600">-</span>
-                                </button>
-                                <div className="flex-1 text-center">
-                                    <div className="text-4xl font-black text-blue-600">{deficitGoal}</div>
-                                    <div className="text-xs text-gray-500 font-semibold">kcal/dia</div>
-                                </div>
-                                <button
-                                    onClick={() => setDeficitGoal(Math.min(1000, deficitGoal + 50))}
-                                    className="w-12 h-12 rounded-full border-2 border-blue-200 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
-                                >
-                                    <span className="text-2xl font-bold text-blue-600">+</span>
-                                </button>
+                        <div className="flex items-center justify-between mb-8 px-4">
+                            <button
+                                onClick={() => setDeficitGoal(Math.max(500, deficitGoal - 500))}
+                                className="w-12 h-12 rounded-full border-2 border-blue-100 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                            >
+                                <span className="text-2xl font-bold text-blue-600">-</span>
+                            </button>
+                            <div className="flex-1 text-center">
+                                <div className="text-4xl font-black text-blue-600">{deficitGoal}</div>
+                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">kcal acumuladas</div>
                             </div>
+                            <button
+                                onClick={() => setDeficitGoal(Math.min(15000, deficitGoal + 500))}
+                                className="w-12 h-12 rounded-full border-2 border-blue-100 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                            >
+                                <span className="text-2xl font-bold text-blue-600">+</span>
+                            </button>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-xl mb-6">
-                            <div className="text-xs font-semibold text-blue-700 uppercase mb-2">Estimativa de Perda</div>
-                            <div className="text-sm text-blue-900">
-                                <strong>{(deficitGoal * 7 / 7700).toFixed(2)} kg/semana</strong>
-                                <div className="text-xs text-blue-600 mt-1">
-                                    (baseado em déficit de {deficitGoal} kcal/dia)
+                        <div className="bg-blue-50 p-4 rounded-2xl mb-6 mx-4">
+                            <div className="text-[10px] font-bold text-blue-700 uppercase mb-2 tracking-wider">Equivalência Estimada</div>
+                            <div className="text-sm text-blue-900 leading-relaxed">
+                                Com este déficit, você perderá cerca de <strong className="text-blue-600">{(deficitGoal / 7700).toFixed(2)} kg</strong> de gordura por semana.
+                                <div className="text-[10px] text-blue-400 mt-2 italic font-medium">
+                                    * Referência: 7.700 kcal = 1kg de gordura. Os resultados reais podem variar conforme o metabolismo individual.
                                 </div>
                             </div>
                         </div>
+
+                        <button
+                            onClick={() => {
+                                const todayKey = getDateKey(new Date());
+                                setDeficitStartDate(todayKey);
+                                alert("Contagem de déficit reiniciada a partir de hoje!");
+                            }}
+                            className="w-[calc(100%-2rem)] mx-4 py-3 mb-6 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <CalendarRange className="w-4 h-4" />
+                            Começar contagem hoje
+                        </button>
 
                         <div className="flex gap-3">
                             <button
@@ -3764,7 +4268,97 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                 </div>
             )}
 
+
+            {/* GOALS MODAL */}
+            {isGoalsModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-xl text-gray-800">Editar Metas Diárias</h3>
+                            <button
+                                onClick={() => {
+                                    // Reset to plan defaults
+                                    const defaults = {
+                                        calories: plan.nutrition?.targetCalories || 2000,
+                                        protein: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.macros?.protein || 0), 0) || 150,
+                                        carbs: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.macros?.carbs || 0), 0) || 200,
+                                        fats: plan.nutrition?.meals?.reduce((acc, m) => acc + (m.macros?.fats || 0), 0) || 60
+                                    };
+                                    setCustomTargets(defaults);
+                                }}
+                                className="text-[10px] font-bold text-brand-600 hover:underline uppercase"
+                            >
+                                Resetar para o Plano
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Meta de Calorias (kcal)</label>
+                                <input
+                                    type="number"
+                                    value={customTargets.calories}
+                                    onChange={e => setCustomTargets({ ...customTargets, calories: Number(e.target.value) })}
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-900"
+                                />
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Proteína (g)</label>
+                                    <input
+                                        type="number"
+                                        value={customTargets.protein}
+                                        onChange={e => setCustomTargets({ ...customTargets, protein: Number(e.target.value) })}
+                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Carbos (g)</label>
+                                    <input
+                                        type="number"
+                                        value={customTargets.carbs}
+                                        onChange={e => setCustomTargets({ ...customTargets, carbs: Number(e.target.value) })}
+                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Gordura (g)</label>
+                                    <input
+                                        type="number"
+                                        value={customTargets.fats}
+                                        onChange={e => setCustomTargets({ ...customTargets, fats: Number(e.target.value) })}
+                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setIsGoalsModalOpen(false)}
+                            className="w-full mt-8 py-3 bg-brand-600 text-white font-bold rounded-xl shadow-lg shadow-brand-100 active:scale-95 transition-all"
+                        >
+                            Salvar Metas
+                        </button>
+                        <button
+                            onClick={() => setIsGoalsModalOpen(false)}
+                            className="w-full mt-2 py-3 text-gray-400 text-sm font-bold hover:bg-gray-50 rounded-xl transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Food Preferences Modal */}
+            <FoodPreferencesModal
+                isOpen={isFoodPreferencesModalOpen}
+                onClose={() => setIsFoodPreferencesModalOpen(false)}
+                currentPreferences={foodPreferences}
+                onSave={handleSavePreferences}
+            />
+
             {renderSmartImportModal()}
+            {renderDeficitBreakdownModal()}
 
         </div>
     );
