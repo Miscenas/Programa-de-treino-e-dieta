@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise } from '../types';
+import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
 import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity } from 'lucide-react';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory } from '../services/expertSystem';
@@ -231,6 +231,14 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
 
     // Google Fit Import State
     const [importingGoogleFit, setImportingGoogleFit] = useState(false);
+
+    // Google Fit Data State
+    const [googleFitData, setGoogleFitData] = useState<Array<{
+        date: string;
+        steps: number;
+        calories_burned: number;
+    }>>([]);
+    const [loadingGoogleFitData, setLoadingGoogleFitData] = useState(false);
 
 
     // Modals State
@@ -501,6 +509,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         localStorage.setItem('fitcoach_custom_workouts', JSON.stringify(customWorkouts));
     }, [customWorkouts]);
 
+    // Fetch Google Fit data on mount
+    useEffect(() => {
+        if (user) {
+            fetchGoogleFitData();
+        }
+    }, []);
+
 
     // --- ACTIONS ---
 
@@ -588,12 +603,61 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             alert(`✅ Dados do Google Fit importados com sucesso!\n\n📊 ${data.steps.length} dias de dados salvos.`);
             console.log('Google Fit data imported successfully:', data);
 
+            // Recarregar dados para exibir
+            await fetchGoogleFitData();
+
         } catch (error) {
             console.error('Erro ao importar Google Fit:', error);
             alert('❌ Falha ao importar dados do Google Fit.\n\nVerifique se você configurou o REACT_APP_GOOGLE_CLIENT_ID nas variáveis de ambiente.');
         } finally {
             setImportingGoogleFit(false);
         }
+    };
+
+    // --- GOOGLE FIT DATA FETCHING ---
+
+    const fetchGoogleFitData = async () => {
+        setLoadingGoogleFitData(true);
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const userId = authUser?.id || 'demo-user';
+
+            // Buscar dados dos últimos 30 dias
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            const { data, error } = await supabase
+                .from('smartwatch_data')
+                .select('date, steps, calories_burned')
+                .eq('user_id', userId)
+                .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+                .order('date', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching Google Fit data:', error);
+                return;
+            }
+
+            setGoogleFitData(data || []);
+        } catch (error) {
+            console.error('Error fetching Google Fit data:', error);
+        } finally {
+            setLoadingGoogleFitData(false);
+        }
+    };
+
+    // Calcular Taxa Metabólica Basal (TMB) usando fórmula Harris-Benedict
+    const calculateBMR = (): number => {
+        if (user.gender === Gender.Male) {
+            return Math.round(88.362 + (13.397 * user.weight) + (4.799 * user.height) - (5.677 * user.age));
+        } else {
+            return Math.round(447.593 + (9.247 * user.weight) + (3.098 * user.height) - (4.330 * user.age));
+        }
+    };
+
+    // Obter dados do Google Fit para uma data específica
+    const getGoogleFitDataForDate = (dateKey: string) => {
+        return googleFitData.find(d => d.date === dateKey) || { steps: 0, calories_burned: 0 };
     };
 
 
@@ -1490,6 +1554,114 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </div>
                 </div>
 
+                {/* GOOGLE FIT ACTIVITY CHARTS */}
+                {googleFitData.length > 0 && (
+                    <>
+                        <div className="col-span-full">
+                            <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                                <Activity className="w-6 h-6 text-green-600" />
+                                Atividade Física (Google Fit)
+                            </h2>
+                        </div>
+
+                        {/* STEPS CHART */}
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-green-500" /> Passos Diários
+                                </h3>
+                                {(() => {
+                                    const totalSteps = googleFitData.reduce((sum, d) => sum + d.steps, 0);
+                                    const avgSteps = Math.round(totalSteps / googleFitData.length);
+                                    return (
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black text-green-600">
+                                                {avgSteps.toLocaleString()}
+                                            </div>
+                                            <div className="text-xs font-bold text-gray-400">média/dia</div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                            <div className="h-48">
+                                <PremiumLineChart
+                                    data={googleFitData.map(d => ({
+                                        label: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                                        value: d.steps
+                                    }))}
+                                    color="#10b981"
+                                    yLabel=""
+                                />
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-3">
+                                <div className="bg-green-50 p-3 rounded-xl text-center">
+                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Total</div>
+                                    <div className="text-lg font-black text-green-900">
+                                        {googleFitData.reduce((sum, d) => sum + d.steps, 0).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div className="bg-green-50 p-3 rounded-xl text-center">
+                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Melhor Dia</div>
+                                    <div className="text-lg font-black text-green-900">
+                                        {Math.max(...googleFitData.map(d => d.steps)).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div className="bg-green-50 p-3 rounded-xl text-center">
+                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Meta 10k</div>
+                                    <div className="text-lg font-black text-green-900">
+                                        {googleFitData.filter(d => d.steps >= 10000).length}/{googleFitData.length}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CALORIES BURNED CHART */}
+                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                    <Flame className="w-5 h-5 text-orange-500" /> Calorias Queimadas
+                                </h3>
+                                {(() => {
+                                    const totalCalories = googleFitData.reduce((sum, d) => sum + d.calories_burned, 0);
+                                    const avgCalories = Math.round(totalCalories / googleFitData.length);
+                                    return (
+                                        <div className="text-right">
+                                            <div className="text-2xl font-black text-orange-600">
+                                                {avgCalories}
+                                            </div>
+                                            <div className="text-xs font-bold text-gray-400">média/dia</div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                            <div className="h-48">
+                                <PremiumLineChart
+                                    data={googleFitData.map(d => ({
+                                        label: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                                        value: d.calories_burned
+                                    }))}
+                                    color="#f97316"
+                                    yLabel=" kcal"
+                                />
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                <div className="bg-orange-50 p-3 rounded-xl text-center">
+                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1">Total</div>
+                                    <div className="text-lg font-black text-orange-900">
+                                        {googleFitData.reduce((sum, d) => sum + d.calories_burned, 0).toLocaleString()} kcal
+                                    </div>
+                                </div>
+                                <div className="bg-orange-50 p-3 rounded-xl text-center">
+                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1">Melhor Dia</div>
+                                    <div className="text-lg font-black text-orange-900">
+                                        {Math.max(...googleFitData.map(d => d.calories_burned))} kcal
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
                 {/* MEASUREMENT MODAL */}
                 {isMeasurementModalOpen && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1619,6 +1791,72 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         )}
                     </button>
                 </div>
+
+                {/* ACTIVITY SUMMARY CARD */}
+                {googleFitData.length > 0 && (
+                    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-green-600" />
+                            Atividade Física (Hoje)
+                        </h2>
+
+                        {(() => {
+                            const todayData = getGoogleFitDataForDate(todayKey);
+                            const bmr = calculateBMR();
+                            const totalCaloriesExpended = bmr + todayData.calories_burned;
+                            const stepsGoal = 10000;
+                            const stepsProgress = Math.min((todayData.steps / stepsGoal) * 100, 100);
+
+                            return (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    {/* Passos */}
+                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Passos</span>
+                                            <span className="text-xs text-green-600">{Math.round(stepsProgress)}%</span>
+                                        </div>
+                                        <div className="text-2xl font-black text-green-900 mb-1">
+                                            {todayData.steps.toLocaleString()}
+                                        </div>
+                                        <div className="text-xs text-green-600 mb-2">Meta: {stepsGoal.toLocaleString()}</div>
+                                        <div className="w-full bg-green-200 rounded-full h-2">
+                                            <div
+                                                className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
+                                                style={{ width: `${stepsProgress}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Calorias Queimadas */}
+                                    <div className="bg-gradient-to-br from-orange-50 to-red-50 p-4 rounded-xl border border-orange-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Atividade</span>
+                                            <Flame className="w-4 h-4 text-orange-500" />
+                                        </div>
+                                        <div className="text-2xl font-black text-orange-900 mb-1">
+                                            {todayData.calories_burned}
+                                        </div>
+                                        <div className="text-xs text-orange-600">kcal queimadas</div>
+                                    </div>
+
+                                    {/* Gasto Total */}
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Gasto Total</span>
+                                            <TrendingUp className="w-4 h-4 text-blue-500" />
+                                        </div>
+                                        <div className="text-2xl font-black text-blue-900 mb-1">
+                                            {totalCaloriesExpended}
+                                        </div>
+                                        <div className="text-xs text-blue-600">
+                                            TMB ({bmr}) + Atividade ({todayData.calories_burned})
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
 
                 {/* HEADER GAUGES */}
                 <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
