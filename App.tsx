@@ -12,6 +12,10 @@ const App: React.FC = () => {
   const [plan, setPlan] = useState<FullPlan | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('fitcoach_theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
 
   // Check authentication state
   useEffect(() => {
@@ -64,6 +68,17 @@ const App: React.FC = () => {
       return () => subscription.unsubscribe();
     });
   }, []);
+
+  // Theme Sync logic
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('fitcoach_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('fitcoach_theme', 'light');
+    }
+  }, [isDarkMode]);
 
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -125,9 +140,9 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-brand-50 flex flex-col items-center justify-center p-4">
-        <div className="w-16 h-16 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-brand-800 font-medium animate-pulse">Carregando...</p>
+      <div className="min-h-screen bg-brand-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+        <div className="w-16 h-16 border-4 border-brand-200 dark:border-gray-800 border-t-brand-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-brand-800 dark:text-brand-400 font-medium animate-pulse">Carregando...</p>
       </div>
     );
   }
@@ -144,6 +159,8 @@ const App: React.FC = () => {
     userId={authUser.id}
     user={user}
     plan={plan}
+    isDarkMode={isDarkMode}
+    onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
     onReset={handleReset}
     onUpdatePlan={(newPlan) => {
       setPlan(newPlan);

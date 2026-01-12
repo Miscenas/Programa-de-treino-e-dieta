@@ -32,18 +32,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-4 transition-colors duration-500">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-8 border border-transparent dark:border-gray-800">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-full mb-4">
             <User className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {isLogin ? 'Bem-vindo de volta' : 'Criar conta'}
           </h1>
-          <p className="text-gray-600 mt-2">
-            {isLogin 
-              ? 'Entre para acessar seu plano de treino' 
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            {isLogin
+              ? 'Entre para acessar seu plano de treino'
               : 'Cadastre-se para começar sua jornada fitness'
             }
           </p>
@@ -52,7 +52,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nome completo
               </label>
               <div className="relative">
@@ -61,7 +61,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                   placeholder="Seu nome"
                   required={!isLogin}
                 />
@@ -79,7 +79,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 placeholder="seu@email.com"
                 required
               />
@@ -96,7 +96,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                className="w-full pl-10 pr-12 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                 placeholder="••••••••"
                 required
                 minLength={6}
@@ -114,7 +114,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-indigo-600 dark:bg-indigo-500 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 dark:shadow-indigo-900/40"
           >
             {loading ? 'Processando...' : isLogin ? 'Entrar' : 'Cadastrar'}
           </button>
@@ -124,10 +124,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
           <button
             type="button"
             onClick={() => setIsLogin(!isLogin)}
-            className="text-indigo-600 hover:text-indigo-700 font-medium transition"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-bold transition"
           >
-            {isLogin 
-              ? 'Não tem uma conta? Cadastre-se' 
+            {isLogin
+              ? 'Não tem uma conta? Cadastre-se'
               : 'Já tem uma conta? Entre'
             }
           </button>

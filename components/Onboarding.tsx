@@ -38,7 +38,7 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
     experienceLevel: ExperienceLevel.Beginner,
     workoutFrequency: 3,
     workoutDays: [1, 3, 5], // Default Seg, Qua, Sex
-    workoutSplit: WorkoutSplit.FullBody, 
+    workoutSplit: WorkoutSplit.FullBody,
     foodPreferences: [],
     foodRestrictions: []
   });
@@ -66,18 +66,18 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
       suggestedDays = [1, 2, 3, 4, 5, 6]; // Seg a Sáb
     }
 
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       workoutFrequency: freq,
       workoutDays: suggestedDays,
-      workoutSplit: defaultSplit 
+      workoutSplit: defaultSplit
     }));
   };
 
   const toggleDay = (dayId: number) => {
     const currentDays = formData.workoutDays || [];
     const freq = formData.workoutFrequency || 0;
-    
+
     let newDays: number[];
     if (currentDays.includes(dayId)) {
       // Remover dia
@@ -128,42 +128,41 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
   const renderBasicInfo = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Seu Nome</label>
-        <input 
-          type="text" 
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Seu Nome</label>
+        <input
+          type="text"
           value={formData.name}
           onChange={e => updateField('name', e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 border p-3"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-brand-500 focus:ring-brand-500 border p-3 outline-none"
           placeholder="Ex: João Silva"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Idade</label>
-        <input 
-          type="number" 
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Idade</label>
+        <input
+          type="number"
           value={formData.age}
           onChange={e => updateField('age', Number(e.target.value))}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 border p-3"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-brand-500 focus:ring-brand-500 border p-3 outline-none"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Sexo Biológico</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Sexo Biológico</label>
         <div className="mt-2 grid grid-cols-2 gap-3">
           {[Gender.Male, Gender.Female].map(g => (
             <button
               key={g}
               onClick={() => updateField('gender', g)}
-              className={`p-3 rounded-lg border text-center transition-all ${
-                formData.gender === g 
-                  ? 'bg-brand-50 border-brand-500 text-brand-700 font-bold ring-1 ring-brand-500' 
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`p-3 rounded-lg border text-center transition-all font-bold ${formData.gender === g
+                ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 ring-1 ring-brand-500'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
             >
               {g === Gender.Male ? 'Masculino' : 'Feminino'}
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">*Usado para calcular a Taxa Metabólica Basal.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">*Usado para calcular a Taxa Metabólica Basal.</p>
       </div>
     </div>
   );
@@ -171,13 +170,13 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
   const renderBodyStats = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Altura (cm)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Altura (cm)</label>
         <div className="relative mt-1 rounded-md shadow-sm">
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={formData.height}
             onChange={e => updateField('height', Number(e.target.value))}
-            className="block w-full rounded-md border-gray-300 focus:border-brand-500 focus:ring-brand-500 border p-3 pr-12"
+            className="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-brand-500 focus:ring-brand-500 border p-3 pr-12 outline-none"
           />
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
             <span className="text-gray-500 sm:text-sm">cm</span>
@@ -185,13 +184,13 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Peso Atual (kg)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Peso Atual (kg)</label>
         <div className="relative mt-1 rounded-md shadow-sm">
-          <input 
-            type="number" 
+          <input
+            type="number"
             value={formData.weight}
             onChange={e => updateField('weight', Number(e.target.value))}
-            className="block w-full rounded-md border-gray-300 focus:border-brand-500 focus:ring-brand-500 border p-3 pr-12"
+            className="block w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-brand-500 focus:ring-brand-500 border p-3 pr-12 outline-none"
           />
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
             <span className="text-gray-500 sm:text-sm">kg</span>
@@ -203,7 +202,7 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
 
   const renderGoal = () => (
     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-      <h3 className="text-lg font-medium text-gray-900">Qual é o seu objetivo principal?</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Qual é o seu objetivo principal?</h3>
       <div className="space-y-3">
         {[
           { val: Goal.WeightLoss, label: 'Emagrecer & Definir', desc: 'Perder gordura mantendo massa magra' },
@@ -212,18 +211,17 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
           <button
             key={opt.val}
             onClick={() => updateField('goal', opt.val)}
-            className={`w-full p-4 rounded-xl border text-left transition-all ${
-              formData.goal === opt.val
-                ? 'bg-brand-50 border-brand-500 ring-1 ring-brand-500'
-                : 'bg-white border-gray-200 hover:border-brand-200'
-            }`}
+            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${formData.goal === opt.val
+              ? 'bg-brand-50 border-brand-500 dark:bg-brand-900/20 ring-1 ring-brand-500'
+              : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-brand-200 dark:hover:border-brand-700'
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className={`font-bold ${formData.goal === opt.val ? 'text-brand-900' : 'text-gray-900'}`}>{opt.label}</p>
-                <p className="text-sm text-gray-500">{opt.desc}</p>
+                <p className={`font-bold ${formData.goal === opt.val ? 'text-brand-900 dark:text-brand-400' : 'text-gray-900 dark:text-gray-200'}`}>{opt.label}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{opt.desc}</p>
               </div>
-              {formData.goal === opt.val && <Check className="w-5 h-5 text-brand-600" />}
+              {formData.goal === opt.val && <Check className="w-5 h-5 text-brand-600 dark:text-brand-500" />}
             </div>
           </button>
         ))}
@@ -233,8 +231,8 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
 
   const renderActivity = () => (
     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-      <h3 className="text-lg font-medium text-gray-900">Nível de Atividade Diária</h3>
-      <p className="text-sm text-gray-500">Sem contar os treinos na academia.</p>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nível de Atividade Diária</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Sem contar os treinos na academia.</p>
       <div className="space-y-2">
         {[
           { val: ActivityLevel.Sedentary, label: 'Sedentário', desc: 'Trabalho de escritório, pouco movimento' },
@@ -245,11 +243,10 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
           <button
             key={opt.val}
             onClick={() => updateField('activityLevel', opt.val)}
-            className={`w-full p-3 rounded-lg border text-left text-sm transition-all ${
-              formData.activityLevel === opt.val
-                ? 'bg-brand-50 border-brand-500 text-brand-900'
-                : 'bg-white border-gray-200 text-gray-700'
-            }`}
+            className={`w-full p-4 rounded-xl border-2 text-left text-sm transition-all ${formData.activityLevel === opt.val
+              ? 'bg-brand-50 border-brand-500 text-brand-900 dark:bg-brand-900/30 dark:text-brand-400'
+              : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
           >
             <span className="font-bold">{opt.label}:</span> {opt.desc}
           </button>
@@ -262,7 +259,7 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
     const freq = formData.workoutFrequency || 3;
     const selectedDays = formData.workoutDays || [];
     const missingDays = freq - selectedDays.length;
-    
+
     // Define available splits based on frequency
     let availableSplits: { val: WorkoutSplit, label: string, desc: string }[] = [];
 
@@ -282,8 +279,8 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
       ];
     } else if (freq === 5) {
       availableSplits = [
-         { val: WorkoutSplit.ABCDE, label: 'ABCDE (Um grupo por dia)', desc: 'Foco máximo em cada músculo. Estilo Bodybuilder clássico.' },
-         { val: WorkoutSplit.ABC, label: 'ABC Rotativo (PPL)', desc: 'Treino sequencial (A, B, C, A, B...). Maior frequência de estímulos.' }
+        { val: WorkoutSplit.ABCDE, label: 'ABCDE (Um grupo por dia)', desc: 'Foco máximo em cada músculo. Estilo Bodybuilder clássico.' },
+        { val: WorkoutSplit.ABC, label: 'ABC Rotativo (PPL)', desc: 'Treino sequencial (A, B, C, A, B...). Maior frequência de estímulos.' }
       ];
     } else {
       availableSplits = [
@@ -300,79 +297,76 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
               <button
                 key={lvl}
                 onClick={() => updateField('experienceLevel', lvl)}
-                className={`p-3 rounded-lg border text-center capitalize transition-all ${
-                  formData.experienceLevel === lvl 
-                  ? 'bg-brand-50 border-brand-500 text-brand-700 font-bold' 
+                className={`p-3 rounded-lg border text-center capitalize transition-all ${formData.experienceLevel === lvl
+                  ? 'bg-brand-50 border-brand-500 text-brand-700 font-bold'
                   : 'bg-white border-gray-200'
-                }`}
+                  }`}
               >
-                {lvl === ExperienceLevel.Beginner ? 'Iniciante ( < 6 meses)' : 
-                 lvl === ExperienceLevel.Intermediate ? 'Intermediário (6 meses - 2 anos)' : 'Avançado ( > 2 anos)'}
+                {lvl === ExperienceLevel.Beginner ? 'Iniciante ( < 6 meses)' :
+                  lvl === ExperienceLevel.Intermediate ? 'Intermediário (6 meses - 2 anos)' : 'Avançado ( > 2 anos)'}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="border-t border-gray-100 pt-6">
-          <label className="block text-lg font-medium text-gray-900 mb-2">Frequência Semanal</label>
-          <input 
-            type="range" 
-            min="2" 
-            max="6" 
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+          <label className="block text-lg font-bold text-gray-900 dark:text-white mb-2">Frequência Semanal</label>
+          <input
+            type="range"
+            min="2"
+            max="6"
             step="1"
             value={formData.workoutFrequency}
             onChange={e => updateFrequencyAndDays(Number(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
+            className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-brand-600"
           />
-          <div className="text-center font-bold text-3xl text-brand-600 mt-2">
+          <div className="text-center font-black text-3xl text-brand-600 dark:text-brand-500 mt-2">
             {formData.workoutFrequency} treinos / semana
           </div>
         </div>
 
         <div className="border-t border-gray-100 pt-6">
-            <div className="flex justify-between items-center mb-4">
-               <label className="block text-lg font-medium text-gray-900">Dias de Treino</label>
-               <span className={`text-xs font-bold px-2 py-1 rounded ${missingDays === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                  {missingDays === 0 ? 'Completo' : `Selecione mais ${missingDays}`}
-               </span>
-            </div>
-            
-            <p className="text-sm text-gray-500 mb-3">
-               Os dias não marcados serão considerados <strong className="text-gray-700">Descanso</strong>.
-            </p>
+          <div className="flex justify-between items-center mb-4">
+            <label className="block text-lg font-medium text-gray-900">Dias de Treino</label>
+            <span className={`text-xs font-bold px-2 py-1 rounded ${missingDays === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+              {missingDays === 0 ? 'Completo' : `Selecione mais ${missingDays}`}
+            </span>
+          </div>
 
-            <div className="flex justify-between gap-1">
-               {WEEKDAYS.map((day) => {
-                 const isSelected = selectedDays.includes(day.id);
-                 return (
-                   <button
-                     key={day.id}
-                     onClick={() => toggleDay(day.id)}
-                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                        isSelected 
-                        ? 'bg-brand-600 text-white shadow-md shadow-brand-200 scale-105' 
-                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                     }`}
-                   >
-                     {day.label}
-                   </button>
-                 )
-               })}
-            </div>
+          <p className="text-sm text-gray-500 mb-3">
+            Os dias não marcados serão considerados <strong className="text-gray-700">Descanso</strong>.
+          </p>
+
+          <div className="flex justify-between gap-1">
+            {WEEKDAYS.map((day) => {
+              const isSelected = selectedDays.includes(day.id);
+              return (
+                <button
+                  key={day.id}
+                  onClick={() => toggleDay(day.id)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${isSelected
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-200 scale-105'
+                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    }`}
+                >
+                  {day.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className="border-t border-gray-100 pt-6">
-           <label className="block text-lg font-medium text-gray-900 mb-3">Estilo de Divisão</label>
-           <div className="space-y-3">
-             {availableSplits.map((opt) => (
-                <button
+          <label className="block text-lg font-medium text-gray-900 mb-3">Estilo de Divisão</label>
+          <div className="space-y-3">
+            {availableSplits.map((opt) => (
+              <button
                 key={opt.val}
                 onClick={() => updateField('workoutSplit', opt.val)}
-                className={`w-full p-4 rounded-xl border text-left transition-all ${
-                  formData.workoutSplit === opt.val
-                    ? 'bg-brand-50 border-brand-500 ring-1 ring-brand-500'
-                    : 'bg-white border-gray-200 hover:border-brand-200'
-                }`}
+                className={`w-full p-4 rounded-xl border text-left transition-all ${formData.workoutSplit === opt.val
+                  ? 'bg-brand-50 border-brand-500 ring-1 ring-brand-500'
+                  : 'bg-white border-gray-200 hover:border-brand-200'
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -382,8 +376,8 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
                   {formData.workoutSplit === opt.val && <Check className="w-5 h-5 text-brand-600" />}
                 </div>
               </button>
-             ))}
-           </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -392,7 +386,7 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
   const renderNutrition = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">O que você EVITA comer? (Restrições)</label>
+        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">O que você EVITA comer? (Restrições)</label>
         <div className="flex flex-wrap gap-2">
           {['Leite', 'Ovos', 'Carne Vermelha', 'Peixe', 'Glúten', 'Amendoim'].map(item => {
             const isSelected = formData.foodRestrictions?.includes(item);
@@ -401,16 +395,15 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
                 key={item}
                 onClick={() => {
                   const current = formData.foodRestrictions || [];
-                  updateField('foodRestrictions', isSelected 
+                  updateField('foodRestrictions', isSelected
                     ? current.filter(i => i !== item)
                     : [...current, item]
                   );
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  isSelected
-                    ? 'bg-red-50 border-red-500 text-red-700'
-                    : 'bg-white border-gray-300 text-gray-600'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm border-2 font-bold transition-colors ${isSelected
+                  ? 'bg-red-50 border-red-500 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
               >
                 {item}
               </button>
@@ -418,9 +411,9 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
           })}
         </div>
       </div>
-      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-        <h4 className="font-bold text-yellow-800 text-sm mb-1">Nota do Nutricionista IA</h4>
-        <p className="text-xs text-yellow-700">
+      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-900/30">
+        <h4 className="font-bold text-yellow-800 dark:text-yellow-300 text-sm mb-1">Nota do Nutricionista IA</h4>
+        <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">
           Seu plano será calculado automaticamente baseado nas suas respostas anteriores. Certifique-se que seus dados de peso e altura estão corretos.
         </p>
       </div>
@@ -428,17 +421,17 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
   );
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col transition-colors duration-500">
       {/* Header */}
-      <div className="px-6 py-8 pb-4">
-        <h1 className="text-2xl font-bold text-brand-900">Vamos criar seu plano</h1>
-        <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div 
+      <div className="px-6 py-8 pb-4 bg-white dark:bg-gray-950 border-b border-transparent dark:border-gray-900">
+        <h1 className="text-2xl font-black text-brand-900 dark:text-white">Vamos criar seu plano</h1>
+        <div className="mt-4 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+          <div
             className="h-full bg-brand-500 transition-all duration-500 ease-out"
             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-right">Passo {currentStep + 1} de {steps.length}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-right font-bold">Passo {currentStep + 1} de {steps.length}</p>
       </div>
 
       {/* Content */}
@@ -452,21 +445,22 @@ export const Onboarding: React.FC<Props> = ({ onComplete }) => {
       </div>
 
       {/* Footer Nav */}
-      <div className="p-6 border-t border-gray-100 bg-white sticky bottom-0">
+      <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950 sticky bottom-0">
         <div className="flex gap-4">
-          <button 
+          <button
             onClick={handleBack}
             disabled={currentStep === 0}
-            className={`flex-1 py-3 px-4 rounded-xl border font-semibold flex items-center justify-center gap-2 ${
-              currentStep === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
-            }`}
+            className={`flex-1 py-4 px-4 rounded-2xl border-2 font-bold flex items-center justify-center gap-2 transition-all ${currentStep === 0
+              ? 'opacity-30 cursor-not-allowed border-gray-200 dark:border-gray-800 text-gray-400'
+              : 'border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 active:scale-95'
+              }`}
           >
             <ChevronLeft className="w-5 h-5" />
             Voltar
           </button>
-          <button 
+          <button
             onClick={handleNext}
-            className="flex-[2] py-3 px-4 rounded-xl bg-brand-600 text-white font-semibold shadow-lg shadow-brand-200 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+            className="flex-[2] py-4 px-4 rounded-2xl bg-brand-600 dark:bg-brand-500 text-white font-bold shadow-xl shadow-brand-100 dark:shadow-brand-900/40 flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
             {currentStep === steps.length - 1 ? 'Gerar Plano' : 'Próximo'}
             <ChevronRight className="w-5 h-5" />

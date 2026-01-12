@@ -17,6 +17,8 @@ interface Props {
     userId: string;
     plan: FullPlan;
     user: UserProfile;
+    isDarkMode: boolean;
+    onToggleDarkMode: () => void;
     onReset: () => void;
     onUpdatePlan: (plan: FullPlan) => void;
 }
@@ -157,17 +159,17 @@ const ModernGauge: React.FC<{
             </svg>
 
             <div className="absolute inset-0 flex flex-col items-center justify-center mt-3">
-                <div className="text-gray-400 mb-0.5 scale-90">{icon}</div>
-                <span className={`font - black text - gray - 800 leading - none tracking - tight ${value > 9999 ? 'text-xl' : 'text-2xl'} `}>{value}</span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{suffix} / {max}</span>
+                <div className="text-gray-400 dark:text-gray-500 mb-0.5 scale-90">{icon}</div>
+                <span className={`font-black text-gray-800 dark:text-white leading-none tracking-tight ${value > 9999 ? 'text-xl' : 'text-2xl'}`}>{value}</span>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase mt-0.5">{suffix} / {max}</span>
             </div>
 
-            <span className="text-xs font-bold text-gray-500 mt-1 whitespace-nowrap">{label}</span>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap">{label}</span>
         </div>
     );
 };
 
-export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpdatePlan }) => {
+export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onToggleDarkMode, onReset, onUpdatePlan }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'workout' | 'diet' | 'shopping' | 'calendar' | 'progress'>('overview');
     const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
     const [expandedDay, setExpandedDay] = useState<string | null>(
@@ -2217,10 +2219,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         return (
             <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Evolução Mensal</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Evolução Mensal</h2>
                     <button
                         onClick={() => setIsMeasurementModalOpen(true)}
-                        className="bg-brand-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-brand-700 active:scale-95 transition-all shadow-lg shadow-brand-200"
+                        className="bg-brand-600 dark:bg-brand-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-brand-700 dark:hover:bg-brand-600 active:scale-95 transition-all shadow-lg shadow-brand-200 dark:shadow-brand-900/40"
                     >
                         <Plus className="w-4 h-4" /> Registrar Medidas
                     </button>
@@ -2230,27 +2232,27 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 {googleFitData.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         <div className="col-span-full">
-                            <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
-                                <Activity className="w-6 h-6 text-green-600" />
+                            <h2 className="text-xl font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                                <Activity className="w-6 h-6 text-green-600 dark:text-green-400" />
                                 Atividade Física (Google Fit) - Últimos 30 Dias
                             </h2>
                         </div>
 
                         {/* STEPS CHART */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                    <Activity className="w-5 h-5 text-green-500" /> Passos Diários
+                                <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-green-500 dark:text-green-400" /> Passos Diários
                                 </h3>
                                 {(() => {
                                     const totalSteps = googleFitData.reduce((sum, d) => sum + d.steps, 0);
                                     const avgSteps = Math.round(totalSteps / googleFitData.length);
                                     return (
                                         <div className="text-right">
-                                            <div className="text-2xl font-black text-green-600">
+                                            <div className="text-2xl font-black text-green-600 dark:text-green-400">
                                                 {avgSteps.toLocaleString()}
                                             </div>
-                                            <div className="text-xs font-bold text-gray-400">média/dia</div>
+                                            <div className="text-xs font-bold text-gray-400 dark:text-gray-500">média/dia</div>
                                         </div>
                                     );
                                 })()}
@@ -2266,21 +2268,21 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 />
                             </div>
                             <div className="mt-4 grid grid-cols-3 gap-3">
-                                <div className="bg-green-50 p-3 rounded-xl text-center">
-                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Total</div>
-                                    <div className="text-lg font-black text-green-900">
+                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
+                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Total</div>
+                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
                                         {googleFitData.reduce((sum, d) => sum + d.steps, 0).toLocaleString()}
                                     </div>
                                 </div>
-                                <div className="bg-green-50 p-3 rounded-xl text-center">
-                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Melhor Dia</div>
-                                    <div className="text-lg font-black text-green-900">
+                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
+                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Melhor Dia</div>
+                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
                                         {Math.max(...googleFitData.map(d => d.steps)).toLocaleString()}
                                     </div>
                                 </div>
-                                <div className="bg-green-50 p-3 rounded-xl text-center">
-                                    <div className="text-xs font-semibold text-green-700 uppercase mb-1">Meta 10k</div>
-                                    <div className="text-lg font-black text-green-900">
+                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
+                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Meta 10k</div>
+                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
                                         {googleFitData.filter(d => d.steps >= 10000).length}/{googleFitData.length}
                                     </div>
                                 </div>
@@ -2288,20 +2290,20 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         </div>
 
                         {/* CALORIES BURNED CHART */}
-                        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                    <Flame className="w-5 h-5 text-orange-500" /> Calorias Queimadas
+                                <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                    <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" /> Calorias Queimadas
                                 </h3>
                                 {(() => {
                                     const totalCalories = googleFitData.reduce((sum, d) => sum + d.calories_burned, 0);
                                     const avgCalories = Math.round(totalCalories / googleFitData.length);
                                     return (
                                         <div className="text-right">
-                                            <div className="text-2xl font-black text-orange-600">
+                                            <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
                                                 {avgCalories}
                                             </div>
-                                            <div className="text-xs font-bold text-gray-400">média/dia</div>
+                                            <div className="text-xs font-bold text-gray-400 dark:text-gray-500">média/dia</div>
                                         </div>
                                     );
                                 })()}
@@ -2317,15 +2319,15 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 />
                             </div>
                             <div className="mt-4 grid grid-cols-2 gap-3">
-                                <div className="bg-orange-50 p-3 rounded-xl text-center">
-                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1">Total</div>
-                                    <div className="text-lg font-black text-orange-900">
+                                <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-xl text-center border border-transparent dark:border-orange-900/50">
+                                    <div className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase mb-1">Total</div>
+                                    <div className="text-lg font-black text-orange-900 dark:text-orange-200">
                                         {googleFitData.reduce((sum, d) => sum + d.calories_burned, 0).toLocaleString()} kcal
                                     </div>
                                 </div>
-                                <div className="bg-orange-50 p-3 rounded-xl text-center">
-                                    <div className="text-xs font-semibold text-orange-700 uppercase mb-1">Melhor Dia</div>
-                                    <div className="text-lg font-black text-orange-900">
+                                <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-xl text-center border border-transparent dark:border-orange-900/50">
+                                    <div className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase mb-1">Melhor Dia</div>
+                                    <div className="text-lg font-black text-orange-900 dark:text-orange-200">
                                         {Math.max(...googleFitData.map(d => d.calories_burned))} kcal
                                     </div>
                                 </div>
@@ -2335,22 +2337,22 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 )}
 
                 <div className="pt-6">
-                    <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
-                        <Scale className="w-6 h-6 text-brand-600" />
+                    <h2 className="text-xl font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <Scale className="w-6 h-6 text-brand-600 dark:text-brand-400" />
                         Medidas e Composição Corporal
                     </h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* WEIGHT CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <Scale className="w-5 h-5 text-brand-500" /> Peso Corporal
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <Scale className="w-5 h-5 text-brand-500 dark:text-brand-400" /> Peso Corporal
                             </h3>
                             {weightChartData.length > 0 && (
-                                <span className="text-2xl font-black text-brand-600">
-                                    {weightChartData[weightChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">kg</span>
+                                <span className="text-2xl font-black text-brand-600 dark:text-brand-400">
+                                    {weightChartData[weightChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">kg</span>
                                 </span>
                             )}
                         </div>
@@ -2360,14 +2362,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     </div>
 
                     {/* BODY FAT CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-rose-500" /> Gordura Corporal
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" /> Gordura Corporal
                             </h3>
                             {fatChartData.length > 0 && (
-                                <span className="text-2xl font-black text-rose-600">
-                                    {fatChartData[fatChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">%</span>
+                                <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
+                                    {fatChartData[fatChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">%</span>
                                 </span>
                             )}
                         </div>
@@ -2377,14 +2379,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     </div>
 
                     {/* WAIST CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <ScanLine className="w-5 h-5 text-emerald-500" /> Medida Abdominal
+                            <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <ScanLine className="w-5 h-5 text-emerald-500 dark:text-emerald-400" /> Medida Abdominal
                             </h3>
                             {waistChartData.length > 0 && (
-                                <span className="text-2xl font-black text-emerald-600">
-                                    {waistChartData[waistChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">cm</span>
+                                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                    {waistChartData[waistChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">cm</span>
                                 </span>
                             )}
                         </div>
@@ -2398,38 +2400,38 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 {/* MEASUREMENT MODAL */}
                 {isMeasurementModalOpen && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                        <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                            <h3 className="font-bold text-xl mb-4 text-gray-800">Registrar Medidas</h3>
+                        <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
+                            <h3 className="font-bold text-xl mb-4 text-gray-800 dark:text-white">Registrar Medidas</h3>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-600 mb-1">Peso (kg)</label>
+                                    <label className="block text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Peso (kg)</label>
                                     <input
                                         type="number"
                                         value={newMeasurement.weight}
                                         onChange={e => setNewMeasurement({ ...newMeasurement, weight: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900 dark:text-white transition-colors"
                                         placeholder="Ex: 75.5"
                                         autoFocus
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-600 mb-1">Gordura Corporal % (Opcional)</label>
+                                    <label className="block text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Gordura Corporal % (Opcional)</label>
                                     <input
                                         type="number"
                                         value={newMeasurement.bodyFat}
                                         onChange={e => setNewMeasurement({ ...newMeasurement, bodyFat: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900 dark:text-white transition-colors"
                                         placeholder="Ex: 15"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-600 mb-1">Medida Abdominal (cm)</label>
+                                    <label className="block text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Medida Abdominal (cm)</label>
                                     <input
                                         type="number"
                                         value={newMeasurement.waist}
                                         onChange={e => setNewMeasurement({ ...newMeasurement, waist: e.target.value })}
-                                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-lg font-bold text-gray-900 dark:text-white transition-colors"
                                         placeholder="Ex: 85"
                                     />
                                 </div>
@@ -2438,7 +2440,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             <div className="flex gap-3 mt-6">
                                 <button
                                     onClick={() => setIsMeasurementModalOpen(false)}
-                                    className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition-colors"
+                                    className="flex-1 py-3 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
                                 >
                                     Cancelar
                                 </button>
@@ -2560,8 +2562,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
         return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-                    <div className="bg-brand-600 p-6 text-white relative">
+                <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800 shadow-2xl">
+                    <div className="bg-brand-600 dark:bg-brand-500 p-6 text-white relative">
                         <button
                             onClick={() => setIsDeficitBreakdownOpen(false)}
                             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -2572,7 +2574,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             <TrendingUp className="w-6 h-6" />
                             Resumo de Déficit
                         </h2>
-                        <p className="text-brand-100 text-sm mt-1">
+                        <p className="text-brand-100 dark:text-brand-200 text-sm mt-1">
                             {deficitStartDate
                                 ? `Ciclo de 7 dias (Início: ${new Date(Number(deficitStartDate.split('-')[0]), Number(deficitStartDate.split('-')[1]) - 1, Number(deficitStartDate.split('-')[2])).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })})`
                                 : "Últimos 7 dias acumulados"
@@ -2584,38 +2586,38 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         <div className="space-y-3">
                             {days.map((day, idx) => {
                                 return (
-                                    <div key={day.dKey} className={`rounded-2xl p-4 border ${day.dKey === todayKey ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-gray-50 border-gray-100'} ${day.isFuture ? 'opacity-70 bg-gray-50/50 dashed-border' : ''}`}>
+                                    <div key={day.dKey} className={`rounded-2xl p-4 border transition-colors ${day.dKey === todayKey ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-100 dark:ring-blue-900/50' : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800'} ${day.isFuture ? 'opacity-70 dashed-border' : ''}`}>
                                         <div className="flex justify-between items-center mb-3">
                                             <div className="flex flex-col">
-                                                <h3 className={`font-bold ${day.dKey === todayKey ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                <h3 className={`font-bold ${day.dKey === todayKey ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
                                                     {day.date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}
                                                     {day.dKey === todayKey && " (Hoje)"}
                                                 </h3>
-                                                {day.isFuture && <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Projeção (TMB)</span>}
+                                                {day.isFuture && <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projeção (TMB)</span>}
                                             </div>
-                                            <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${day.balance >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${day.balance >= 0 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}`}>
                                                 {day.balance >= 0 ? `+${day.balance} kcal` : `${day.balance} kcal`}
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-2">
                                             <div className="text-center">
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase">TMB</p>
-                                                <p className="text-xs font-bold text-gray-700">{day.bmr}</p>
+                                                <p className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">TMB</p>
+                                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{day.bmr}</p>
                                             </div>
                                             <button
                                                 onClick={() => handleOpenExtraCaloriesModal(day.dKey, day.extra)}
-                                                className="text-center hover:bg-gray-100 rounded-lg transition-colors py-1 -my-1"
+                                                className="text-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors py-1 -my-1"
                                             >
                                                 <div className="flex items-center justify-center gap-1">
-                                                    <p className="text-[8px] font-bold text-gray-400 uppercase">Atividade</p>
-                                                    <Edit2 className="w-2 h-2 text-gray-300" />
+                                                    <p className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Atividade</p>
+                                                    <Edit2 className="w-2 h-2 text-gray-400 dark:text-gray-500" />
                                                 </div>
-                                                <p className="text-xs font-bold text-brand-600">+{day.extra}</p>
+                                                <p className="text-xs font-bold text-brand-600 dark:text-brand-400">+{day.extra}</p>
                                             </button>
-                                            <div className="text-center border-l border-gray-200">
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase">Consumo</p>
-                                                <p className="text-xs font-black text-orange-600">-{day.consumed}</p>
+                                            <div className="text-center border-l border-gray-200 dark:border-gray-800">
+                                                <p className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase">Consumo</p>
+                                                <p className="text-xs font-black text-orange-600 dark:text-orange-400">-{day.consumed}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -2624,22 +2626,22 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         </div>
                     </div>
 
-                    <div className="p-6 bg-gray-50 border-t border-gray-100">
+                    <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
                         <div className="flex justify-between items-center mb-4">
                             <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase">Saldo Semanal</p>
-                                <p className="text-2xl font-black text-brand-600">{weeklyDeficit} kcal</p>
+                                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Saldo Semanal</p>
+                                <p className="text-2xl font-black text-brand-600 dark:text-brand-400">{weeklyDeficit} kcal</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Queima Estimada</p>
-                                <p className="text-lg font-black text-gray-800">
+                                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Queima Estimada</p>
+                                <p className="text-lg font-black text-gray-800 dark:text-white">
                                     {(weeklyDeficit / 7700).toFixed(2)} kg
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={() => setIsDeficitBreakdownOpen(false)}
-                            className="w-full py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 transition-transform active:scale-[0.98]"
+                            className="w-full py-4 bg-brand-600 dark:bg-brand-500 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 dark:shadow-brand-900/40 transition-transform active:scale-[0.98]"
                         >
                             Fechar Resumo
                         </button>
@@ -2656,7 +2658,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
             <div className="space-y-6 animate-in fade-in duration-300 pb-20">
                 {/* COMPACT ACTIVITY ROW (GOOGLE FIT) */}
                 {googleFitData.length > 0 && (
-                    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-wrap items-center justify-between gap-4 transition-colors">
                         {(() => {
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
@@ -2675,37 +2677,37 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             return (
                                 <>
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-green-100 p-2 rounded-lg">
-                                            <Footprints className="w-5 h-5 text-green-600" />
+                                        <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+                                            <Footprints className="w-5 h-5 text-green-600 dark:text-green-400" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passos</p>
-                                            <p className="text-sm font-black text-gray-800">{todayData.steps.toLocaleString()}<span className="text-[10px] font-bold text-gray-400 ml-1">/ {stepsGoal.toLocaleString()}</span></p>
+                                            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Passos</p>
+                                            <p className="text-sm font-black text-gray-800 dark:text-gray-200">{todayData.steps.toLocaleString()}<span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 ml-1">/ {stepsGoal.toLocaleString()}</span></p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-orange-100 p-2 rounded-lg">
-                                            <Flame className="w-5 h-5 text-orange-600" />
+                                        <div className="bg-orange-100 dark:bg-orange-950/40 p-2 rounded-lg">
+                                            <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atividade</p>
-                                            <p className="text-sm font-black text-gray-800">
-                                                {activeCalories}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span>
+                                            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Atividade</p>
+                                            <p className="text-sm font-black text-gray-800 dark:text-gray-200">
+                                                {activeCalories}<span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 ml-1">kcal</span>
                                                 {googleFitTotal > 0 && googleFitTotal < bmr && (
-                                                    <span className="block text-[9px] text-gray-400 font-medium">Fit Total: {googleFitTotal}</span>
+                                                    <span className="block text-[9px] text-gray-400 dark:text-gray-500 font-medium">Fit Total: {googleFitTotal}</span>
                                                 )}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-3">
-                                        <div className="bg-blue-100 p-2 rounded-lg">
-                                            <TrendingUp className="w-5 h-5 text-blue-600" />
+                                        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                                            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gasto Total</p>
-                                            <p className="text-sm font-black text-gray-800">{totalExpended}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
+                                            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gasto Total</p>
+                                            <p className="text-sm font-black text-gray-800 dark:text-gray-200">{totalExpended}<span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 ml-1">kcal</span></p>
                                         </div>
                                     </div>
                                 </>
@@ -2716,19 +2718,19 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
 
                 {/* HEADER GAUGES */}
-                <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm transition-colors">
                     {/* Date Navigator in Dashboard */}
                     <div className="flex items-center justify-between mb-6 px-2">
                         <button onClick={() => {
                             const d = new Date(selectedDate);
                             d.setDate(d.getDate() - 1);
                             setSelectedDate(d);
-                        }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <ChevronLeft className="w-5 h-5 text-gray-400" />
+                        }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                            <ChevronLeft className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                         </button>
 
                         <div className="text-center">
-                            <h2 className="text-lg font-bold text-gray-800">
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
                                 {selectedDateKey === todayKey ? 'Resumo de Hoje' : `Resumo de ${selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} `}
                             </h2>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Histórico e Controle</p>
@@ -2738,8 +2740,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             const d = new Date(selectedDate);
                             d.setDate(d.getDate() + 1);
                             setSelectedDate(d);
-                        }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <ChevronRight className="w-5 h-5 text-gray-400" />
+                        }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                            <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                         </button>
                     </div>
 
@@ -2756,7 +2758,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             />
                             <button
                                 onClick={() => setIsGoalsModalOpen(true)}
-                                className="absolute top-2 right-2 bg-orange-50 hover:bg-orange-100 text-orange-600 p-1.5 rounded-lg transition-colors"
+                                className="absolute top-2 right-2 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-800/50 text-orange-600 dark:text-orange-400 p-1.5 rounded-lg transition-colors"
                                 title="Editar metas de nutrição"
                             >
                                 <Settings2 className="w-3.5 h-3.5" />
@@ -2778,14 +2780,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 />
                             </div>
                             <div className="flex flex-col items-center">
-                                <div className="bg-blue-50 text-[9px] font-bold text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1 mt-1">
+                                <div className="bg-blue-50 dark:bg-blue-900/30 text-[9px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50 flex items-center gap-1 mt-1">
                                     Meta 1kg
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             alert("Cálculo Estimado:\n7.700 kcal acumuladas equivalem a aproximadamente 1kg de gordura corporal (Regra de Wishnofsky).\n\nEste valor é uma estimativa científica e pode variar dependendo do metabolismo individual, composição corporal e outros fatores biológicos.");
                                         }}
-                                        className="hover:text-blue-800"
+                                        className="hover:text-blue-800 dark:hover:text-blue-300"
                                     >
                                         <Info className="w-3 h-3" />
                                     </button>
@@ -2796,7 +2798,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                     e.stopPropagation();
                                     setIsDeficitModalOpen(true);
                                 }}
-                                className="absolute top-2 right-2 bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors z-10"
+                                className="absolute top-2 right-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 p-1.5 rounded-lg transition-colors z-10"
                                 title="Editar meta de deficit"
                             >
                                 <Edit3 className="w-3.5 h-3.5" />
@@ -2808,9 +2810,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
                         {/* MACROS CARD */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm h-full">
-                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <Droplets className="w-5 h-5 text-blue-500" />
+                        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm h-full transition-colors">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <Droplets className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                                 Macronutrientes ({selectedDateKey === todayKey ? 'Hoje' : 'Dia'})
                             </h3>
 
@@ -2818,16 +2820,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 {/* PROTEIN */}
                                 <div>
                                     <div className="flex justify-between items-end mb-1">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900 dark:text-indigo-300">
                                             <Beef className="w-3.5 h-3.5" /> Proteínas
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.protein)}</span> / {displayMacros.targets.protein}g
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="font-bold text-gray-800 dark:text-gray-200">{Math.round(displayMacros.consumed.protein)}</span> / {displayMacros.targets.protein}g
                                         </div>
                                     </div>
-                                    <div className="h-2 w-full bg-indigo-50 rounded-full overflow-hidden">
+                                    <div className="h-2 w-full bg-indigo-50 dark:bg-indigo-950/40 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-indigo-500 rounded-full transition-all duration-700"
+                                            className="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-700"
                                             style={{ width: `${Math.min((displayMacros.consumed.protein / displayMacros.targets.protein) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
@@ -2836,16 +2838,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 {/* CARBS */}
                                 <div>
                                     <div className="flex justify-between items-end mb-1">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300">
                                             <Wheat className="w-3.5 h-3.5" /> Carboidratos
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.carbs)}</span> / {displayMacros.targets.carbs}g
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="font-bold text-gray-800 dark:text-gray-200">{Math.round(displayMacros.consumed.carbs)}</span> / {displayMacros.targets.carbs}g
                                         </div>
                                     </div>
-                                    <div className="h-2 w-full bg-amber-50 rounded-full overflow-hidden">
+                                    <div className="h-2 w-full bg-amber-50 dark:bg-amber-950/40 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-amber-500 rounded-full transition-all duration-700"
+                                            className="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-700"
                                             style={{ width: `${Math.min((displayMacros.consumed.carbs / displayMacros.targets.carbs) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
@@ -2854,16 +2856,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 {/* FATS */}
                                 <div>
                                     <div className="flex justify-between items-end mb-1">
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900 dark:text-rose-300">
                                             <Droplets className="w-3.5 h-3.5" /> Gorduras
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            <span className="font-bold text-gray-800">{Math.round(displayMacros.consumed.fats)}</span> / {displayMacros.targets.fats}g
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="font-bold text-gray-800 dark:text-gray-200">{Math.round(displayMacros.consumed.fats)}</span> / {displayMacros.targets.fats}g
                                         </div>
                                     </div>
-                                    <div className="h-2 w-full bg-rose-50 rounded-full overflow-hidden">
+                                    <div className="h-2 w-full bg-rose-50 dark:bg-rose-950/40 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                                            className="h-full bg-rose-500 dark:bg-rose-400 rounded-full transition-all duration-700"
                                             style={{ width: `${Math.min((displayMacros.consumed.fats / displayMacros.targets.fats) * 100, 100)}% ` }}
                                         ></div>
                                     </div>
@@ -2874,42 +2876,42 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                     <div className="space-y-4">
                         {/* QUICK ACTIONS */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <Zap className="w-5 h-5 text-yellow-500" />
+                        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
                                 Ações Rápidas
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => startCamera(null, 'log')}
-                                    className="flex flex-col items-center justify-center p-4 bg-orange-50/50 border border-orange-100 rounded-2xl hover:bg-orange-100/50 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
+                                    className="flex flex-col items-center justify-center p-4 bg-orange-50/50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/30 rounded-2xl hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
                                 >
-                                    <div className="absolute top-0 right-0 w-16 h-16 bg-orange-200/20 rounded-full -mr-8 -mt-8 blur-2xl"></div>
-                                    <div className="bg-gradient-to-br from-white to-orange-50 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(249,115,22,0.3)] border border-orange-100 mb-3 group-hover:scale-110 transition-transform">
-                                        <Camera className="w-6 h-6 text-orange-600" />
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-orange-200/20 dark:bg-orange-900/40 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                    <div className="bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-orange-900/30 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(249,115,22,0.3)] dark:shadow-orange-900/20 border border-orange-100 dark:border-orange-800 mb-3 group-hover:scale-110 transition-transform">
+                                        <Camera className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                                     </div>
-                                    <span className="text-xs font-black text-orange-900 uppercase tracking-tight">Análise IA</span>
-                                    <span className="text-[9px] text-orange-600/70 font-bold">Foto de Comida</span>
+                                    <span className="text-xs font-black text-orange-900 dark:text-orange-300 uppercase tracking-tight">Análise IA</span>
+                                    <span className="text-[9px] text-orange-600/70 dark:text-orange-500 font-bold">Foto de Comida</span>
                                 </button>
 
                                 <button
                                     onClick={handleGoogleFitImport}
-                                    className="flex flex-col items-center justify-center p-4 bg-blue-50/50 border border-blue-100 rounded-2xl hover:bg-blue-100/50 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
+                                    className="flex flex-col items-center justify-center p-4 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-all hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
                                 >
-                                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200/20 rounded-full -mr-8 -mt-8 blur-2xl"></div>
-                                    <div className="bg-gradient-to-br from-white to-blue-50 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(59,130,246,0.3)] border border-blue-100 mb-3 group-hover:scale-110 transition-transform">
-                                        <RefreshCw className={`w-6 h-6 text-blue-600 ${(loadingGoogleFitData || importingGoogleFit) ? 'animate-spin' : ''}`} />
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-200/20 dark:bg-blue-900/40 rounded-full -mr-8 -mt-8 blur-2xl"></div>
+                                    <div className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/30 p-3 rounded-xl shadow-[0_8px_16px_-4px_rgba(59,130,246,0.3)] dark:shadow-blue-900/20 border border-blue-100 dark:border-blue-800 mb-3 group-hover:scale-110 transition-transform">
+                                        <RefreshCw className={`w-6 h-6 text-blue-600 dark:text-blue-400 ${(loadingGoogleFitData || importingGoogleFit) ? 'animate-spin' : ''}`} />
                                     </div>
-                                    <span className="text-xs font-black text-blue-900 uppercase tracking-tight">Sincronizar</span>
-                                    <span className="text-[9px] text-blue-600/70 font-bold">Smartwatch</span>
+                                    <span className="text-xs font-black text-blue-900 dark:text-blue-300 uppercase tracking-tight">Sincronizar</span>
+                                    <span className="text-[9px] text-blue-600/70 dark:text-blue-500 font-bold">Smartwatch</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* MEAL CHECK-IN */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                                <Utensils className="w-4 h-4 text-orange-500" />
+                        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2 text-sm">
+                                <Utensils className="w-4 h-4 text-orange-500 dark:text-orange-400" />
                                 Refeições de {selectedDateKey === todayKey ? 'Hoje' : selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                             </h3>
                             <div className="space-y-2">
@@ -2925,15 +2927,15 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                 else newConsumed.add(key);
                                                 setConsumedMeals(newConsumed);
                                             }}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${isDone ? 'bg-green-50 border-green-200 opacity-75' : 'bg-white border-gray-100 hover:border-orange-200'}`}
+                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${isDone ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 opacity-75' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-900'}`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200'}`}>
+                                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 dark:border-gray-600'}`}>
                                                     {isDone && <Check className="w-3.5 h-3.5" />}
                                                 </div>
-                                                <span className={`text-sm font-bold ${isDone ? 'text-green-800 line-through' : 'text-gray-700'}`}>{meal.name}</span>
+                                                <span className={`text-sm font-bold ${isDone ? 'text-green-800 dark:text-green-300 line-through' : 'text-gray-700 dark:text-gray-200'}`}>{meal.name}</span>
                                             </div>
-                                            {!isDone && <span className="text-[10px] font-bold text-gray-400">{meal.time}</span>}
+                                            {!isDone && <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">{meal.time}</span>}
                                         </button>
                                     );
                                 })}
@@ -2941,9 +2943,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         </div>
 
                         {/* WORKOUT CHECK-IN */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                                <Dumbbell className="w-4 h-4 text-brand-500" />
+                        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2 text-sm">
+                                <Dumbbell className="w-4 h-4 text-brand-500 dark:text-brand-400" />
                                 Treino de Hoje
                             </h3>
                             <button
@@ -2953,19 +2955,19 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                     else newLog.add(selectedDateKey);
                                     setWorkoutLog(newLog);
                                 }}
-                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${displayWorkoutDone ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-100 hover:border-brand-200'}`}
+                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${displayWorkoutDone ? 'bg-brand-50 dark:bg-brand-950/20 border-brand-200 dark:border-brand-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-900'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${displayWorkoutDone ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-200 text-transparent'}`}>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${displayWorkoutDone ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-200 dark:border-gray-600 text-transparent'}`}>
                                         <Check className="w-4 h-4" />
                                     </div>
                                     <div className="text-left">
-                                        <p className={`text-sm font-bold ${displayWorkoutDone ? 'text-brand-900' : 'text-gray-800'}`}>{todayWorkout.focus}</p>
-                                        <p className="text-[10px] text-gray-500">{(todayWorkout.exercises || []).length} exercícios planejados</p>
+                                        <p className={`text-sm font-bold ${displayWorkoutDone ? 'text-brand-900 dark:text-brand-300' : 'text-gray-800 dark:text-gray-200'}`}>{todayWorkout.focus}</p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{(todayWorkout.exercises || []).length} exercícios planejados</p>
                                     </div>
                                 </div>
                                 {!displayWorkoutDone && (
-                                    <div className="bg-brand-100 text-brand-600 p-2 rounded-lg">
+                                    <div className="bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 p-2 rounded-lg">
                                         <Zap className="w-4 h-4" />
                                     </div>
                                 )}
@@ -2974,19 +2976,19 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                         {/* CONNECT GOOGLE FIT OPTIONAL PROMPT */}
                         {googleFitData.length === 0 && (
-                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl border border-blue-100">
+                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 transition-colors">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="bg-white p-2 rounded-lg shadow-sm">
-                                        <Smartphone className="w-5 h-5 text-blue-600" />
+                                    <div className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                                        <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-blue-900">Conectar Google Fit</p>
-                                        <p className="text-[10px] text-blue-700">Sincronize passos e calorias automaticamente</p>
+                                        <p className="text-xs font-bold text-blue-900 dark:text-blue-200">Conectar Google Fit</p>
+                                        <p className="text-[10px] text-blue-700 dark:text-blue-400">Sincronize passos e calorias automaticamente</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleGoogleFitImport}
-                                    className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all"
+                                    className="w-full py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-[0.98] transition-all"
                                 >
                                     Conectar Agora
                                 </button>
@@ -2994,9 +2996,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         )}
 
                         {/* END DAY BUTTON - Manual Deficit Lock */}
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
-                                <Lock className="w-4 h-4 text-indigo-500" />
+                        <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm transition-colors">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2 text-sm">
+                                <Lock className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                                 Encerrar o Dia
                             </h3>
                             <button
@@ -3015,8 +3017,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                     setClosedDays(newClosed);
                                 }}
                                 className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${closedDays.has(selectedDateKey)
-                                    ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                    : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95'
+                                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                    : 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40 hover:bg-indigo-700 dark:hover:bg-indigo-600 active:scale-95'
                                     }`}
                             >
                                 {closedDays.has(selectedDateKey) ? (
@@ -3029,7 +3031,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                     </>
                                 )}
                             </button>
-                            <p className="text-[10px] text-center text-gray-400 mt-2 px-2 leading-tight">
+                            <p className="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-2 px-2 leading-tight">
                                 Use isso se você fez jejum ou não vai realizar todas as refeições. O déficit será calculado com o que está marcado.
                             </p>
                         </div>
@@ -3044,21 +3046,21 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* UNDO BUTTON */}
             {backupPlan && (
-                <div className="bg-brand-50 border border-brand-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800 p-3 rounded-xl flex items-center justify-between shadow-sm transition-colors">
                     <div className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-brand-600 animate-spin-slow" />
-                        <span className="text-xs font-bold text-brand-800">Você está usando um plano importado</span>
+                        <RefreshCw className="w-4 h-4 text-brand-600 dark:text-brand-400 animate-spin-slow" />
+                        <span className="text-xs font-bold text-brand-800 dark:text-brand-300">Você está usando um plano importado</span>
                     </div>
                     <button
                         onClick={undoImport}
-                        className="text-[10px] font-black uppercase text-brand-700 hover:text-brand-900 bg-white px-3 py-1.5 rounded-lg border border-brand-100 shadow-sm transition-all active:scale-95"
+                        className="text-[10px] font-black uppercase text-brand-700 dark:text-brand-400 hover:text-brand-900 dark:hover:text-brand-200 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-brand-100 dark:border-brand-700 shadow-sm transition-all active:scale-95"
                     >
                         Restaurar Sistema
                     </button>
                 </div>
             )}
             {/* GLOBAL IMPORT BUTTON */}
-            <div className="bg-gradient-to-br from-indigo-600 to-brand-600 p-4 rounded-2xl shadow-lg shadow-brand-100 flex items-center justify-between group">
+            <div className="bg-gradient-to-br from-indigo-600 to-brand-600 dark:from-indigo-700 dark:to-brand-700 p-4 rounded-2xl shadow-lg shadow-brand-100 dark:shadow-brand-900/40 flex items-center justify-between group transition-colors">
                 <div className="flex items-center gap-3">
                     <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                         <BookOpen className="w-5 h-5 text-white" />
@@ -3070,7 +3072,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 </div>
                 <button
                     onClick={() => setIsSmartImportModalOpen(true)}
-                    className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-indigo-50"
+                    className="bg-white dark:bg-gray-100 text-indigo-600 dark:text-indigo-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-indigo-50 dark:hover:bg-white"
                 >
                     Importar AI
                 </button>
@@ -3086,40 +3088,40 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 const isCustomized = !!customWorkouts[session.dayName];
 
                 return (
-                    <div key={session.dayName} className={`bg - white rounded - xl border transition - all duration - 300 ${isExpanded ? 'border-brand-500 shadow-md' : 'border-gray-200'} `}>
+                    <div key={session.dayName} className={`bg-white dark:bg-gray-900 rounded-xl border transition-all duration-300 ${isExpanded ? 'border-brand-500 shadow-md' : 'border-gray-200 dark:border-gray-800'} `}>
                         <button
                             onClick={() => setExpandedDay(isExpanded ? null : session.dayName)}
                             className="w-full flex items-center justify-between p-4"
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`p - 2 rounded - lg ${isToday ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'} `}>
+                                <div className={`p-2 rounded-lg ${isToday ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} `}>
                                     <CalendarDays className="w-5 h-5" />
                                 </div>
                                 <div className="text-left">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-gray-900">{session.dayName}</h3>
-                                        {isCustomized && <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 rounded-full font-bold flex items-center gap-0.5"><PenSquare className="w-2.5 h-2.5" /> Editado</span>}
+                                        <h3 className="font-bold text-gray-900 dark:text-white">{session.dayName}</h3>
+                                        {isCustomized && <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-[10px] px-1.5 rounded-full font-bold flex items-center gap-0.5"><PenSquare className="w-2.5 h-2.5" /> Editado</span>}
                                     </div>
-                                    <p className="text-sm text-gray-500">{session.focus}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{session.focus}</p>
                                 </div>
                             </div>
-                            {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                            {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />}
                         </button>
 
                         {isExpanded && (
-                            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                            <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
                                 {displayExercises.length === 0 ? (
-                                    <p className="text-center text-gray-400 py-4">Dia de Descanso Merecido! 😴</p>
+                                    <p className="text-center text-gray-400 dark:text-gray-500 py-4 italic">Dia de Descanso Merecido! 😴</p>
                                 ) : (
                                     <div className="space-y-3">
                                         {displayExercises.map((ex, i) => {
                                             const key = `${session.dayName}-${ex.name}`;
                                             const isDone = completedExercises.has(key);
                                             return (
-                                                <div key={i} className="flex gap-3 items-start group py-2 border-b border-gray-50 last:border-0">
+                                                <div key={i} className="flex gap-3 items-start group py-2 border-b border-gray-50 dark:border-gray-800/50 last:border-0">
                                                     <button
                                                         onClick={() => toggleExercise(session.dayName, ex.name)}
-                                                        className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-brand-400'
+                                                        className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600 hover:border-brand-400'
                                                             }`}
                                                     >
                                                         {isDone && <Check className="w-3.5 h-3.5 text-white" />}
@@ -3127,35 +3129,35 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                     <div className={`flex-1 ${isDone ? 'opacity-50' : ''}`}>
                                                         <div className="flex flex-col gap-1">
                                                             <div className="flex justify-between items-start gap-2">
-                                                                <p className={`font-bold text-sm leading-tight ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                                <p className={`font-bold text-sm leading-tight ${isDone ? 'line-through text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>
                                                                     {ex.name}
                                                                 </p>
                                                                 <button
                                                                     onClick={(e) => handleRemoveExercise(session.dayName, i, e)}
-                                                                    className="text-gray-300 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-0.5"
+                                                                    className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-0.5"
                                                                     title="Remover exercício"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             </div>
 
-                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 font-medium">
-                                                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">
-                                                                    <span className="font-bold text-gray-800">{ex.sets}</span> séries
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                                                <span className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                                                                    <span className="font-bold text-gray-800 dark:text-white">{ex.sets}</span> séries
                                                                 </span>
-                                                                <span className="text-gray-300 pl-1">x</span>
-                                                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">
-                                                                    <span className="font-bold text-gray-800">{ex.reps}</span> reps
+                                                                <span className="text-gray-300 dark:text-gray-600 pl-1">x</span>
+                                                                <span className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                                                                    <span className="font-bold text-gray-800 dark:text-white">{ex.reps}</span> reps
                                                                 </span>
                                                                 {ex.rest && (
-                                                                    <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                                                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded">
                                                                         ⏳ {ex.rest}
                                                                     </span>
                                                                 )}
                                                             </div>
 
                                                             {ex.notes && (
-                                                                <p className="text-[11px] text-amber-700 bg-amber-50/50 p-1.5 rounded-lg border border-amber-100 mt-1 flex items-start gap-1.5 leading-snug">
+                                                                <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/10 p-1.5 rounded-lg border border-amber-100 dark:border-amber-900/30 mt-1 flex items-start gap-1.5 leading-snug">
                                                                     <span className="mt-0.5">💡</span> {ex.notes}
                                                                 </p>
                                                             )}
@@ -3168,10 +3170,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 )}
 
                                 {/* Add Exercise Button */}
-                                <div className="mt-4 pt-3 border-t border-gray-50">
+                                <div className="mt-4 pt-3 border-t border-gray-50 dark:border-gray-800">
                                     <button
                                         onClick={() => handleOpenExerciseModal(session.dayName)}
-                                        className="w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center justify-center gap-2 hover:text-brand-600 hover:border-brand-300 transition-colors"
+                                        className="w-full py-2 border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-lg text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-2 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 transition-colors"
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Adicionar Exercício / Aparelho
                                     </button>
@@ -3192,14 +3194,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                 {/* UNDO BUTTON */}
                 {backupPlan && (
-                    <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl flex items-center justify-between shadow-sm">
+                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 p-3 rounded-xl flex items-center justify-between shadow-sm transition-colors">
                         <div className="flex items-center gap-2">
-                            <RefreshCw className="w-4 h-4 text-orange-600 animate-spin-slow" />
-                            <span className="text-xs font-bold text-orange-800">Você está usando uma dieta importada</span>
+                            <RefreshCw className="w-4 h-4 text-orange-600 dark:text-orange-400 animate-spin-slow" />
+                            <span className="text-xs font-bold text-orange-800 dark:text-orange-300">Você está usando uma dieta importada</span>
                         </div>
                         <button
                             onClick={undoImport}
-                            className="text-[10px] font-black uppercase text-orange-700 hover:text-orange-900 bg-white px-3 py-1.5 rounded-lg border border-orange-100 shadow-sm transition-all active:scale-95"
+                            className="text-[10px] font-black uppercase text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-200 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-orange-100 dark:border-orange-700 shadow-sm transition-all active:scale-95"
                         >
                             Restaurar Sistema
                         </button>
@@ -3207,7 +3209,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 )}
 
                 {/* GLOBAL IMPORT BUTTON */}
-                <div className="bg-gradient-to-br from-orange-500 to-rose-500 p-4 rounded-2xl shadow-lg shadow-orange-100 flex items-center justify-between group">
+                <div className="bg-gradient-to-br from-orange-500 to-rose-500 dark:from-orange-600 dark:to-rose-600 p-4 rounded-2xl shadow-lg shadow-orange-100 dark:shadow-orange-900/40 flex items-center justify-between group transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                             <Utensils className="w-5 h-5 text-white" />
@@ -3219,27 +3221,27 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     </div>
                     <button
                         onClick={() => setIsSmartImportModalOpen(true)}
-                        className="bg-white text-orange-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-orange-50"
+                        className="bg-white dark:bg-gray-100 text-orange-600 dark:text-orange-700 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-orange-50 dark:hover:bg-white"
                     >
                         Importar AI
                     </button>
                 </div>
 
                 {/* Date Navigator */}
-                <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm sticky top-0 z-10">
+                <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-sm sticky top-0 z-10 transition-colors">
                     <button onClick={() => {
                         const d = new Date(selectedDate);
                         d.setDate(d.getDate() - 1);
                         handleDateSelect(d);
-                    }} className="p-2 hover:bg-gray-100 rounded-lg">
-                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
 
                     <div className="text-center">
-                        <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Planejamento</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold tracking-wider">Planejamento</p>
                         <div className="flex items-center gap-2 justify-center">
-                            <CalendarRange className="w-4 h-4 text-brand-600" />
-                            <span className="font-bold text-gray-800">
+                            <CalendarRange className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                            <span className="font-bold text-gray-800 dark:text-gray-100">
                                 {selectedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long' })}
                             </span>
                         </div>
@@ -3249,8 +3251,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         const d = new Date(selectedDate);
                         d.setDate(d.getDate() + 1);
                         handleDateSelect(d);
-                    }} className="p-2 hover:bg-gray-100 rounded-lg">
-                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                    }} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                        <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                 </div>
 
@@ -3258,24 +3260,23 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 <div className="flex justify-end gap-2 px-1">
                     <button
                         onClick={() => setIsFoodPreferencesModalOpen(true)}
-                        className="bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-orange-200 transition-colors shadow-sm"
+                        className="bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-orange-200 dark:hover:bg-orange-900/40 transition-colors shadow-sm"
                     >
                         <Carrot className="w-3.5 h-3.5" /> Personalizar Paladar
                     </button>
                     <button
                         onClick={() => setIsGoalsModalOpen(true)}
-                        className="bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 transition-colors shadow-sm"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
                     >
                         <Settings2 className="w-3.5 h-3.5" /> Editar Metas
                     </button>
-
                 </div>
 
                 {/* Daily Summary */}
-                <div className="bg-brand-50 rounded-xl p-4 border border-brand-100">
+                <div className="bg-brand-50 dark:bg-brand-950/20 rounded-xl p-4 border border-brand-100 dark:border-brand-900/50 transition-colors">
                     <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold text-brand-900">Meta Diária</h3>
-                        <span className="text-xs font-bold bg-white text-brand-700 px-2 py-1 rounded shadow-sm">
+                        <h3 className="font-bold text-brand-900 dark:text-brand-300">Meta Diária</h3>
+                        <span className="text-xs font-bold bg-white dark:bg-gray-800 text-brand-700 dark:text-brand-400 px-2 py-1 rounded shadow-sm">
                             {selectedDayPlannedCalories} / {plan.nutrition?.targetCalories || 2000} kcal
                         </span>
                     </div>
@@ -3283,7 +3284,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     {isSaved ? (
                         <button
                             onClick={handleUnsaveDay}
-                            className="w-full py-2 bg-green-100 text-green-700 border border-green-200 rounded-lg font-bold text-sm flex items-center justify-center gap-2"
+                            className="w-full py-2 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 rounded-lg font-bold text-sm flex items-center justify-center gap-2"
                         >
                             <CheckCircle2 className="w-4 h-4" />
                             Dia Salvo na Lista
@@ -3291,7 +3292,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     ) : (
                         <button
                             onClick={handleOpenPlanDayModal}
-                            className="w-full py-2 bg-brand-600 text-white shadow-md shadow-brand-200 rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                            className="w-full py-2 bg-brand-600 dark:bg-brand-500 text-white shadow-md shadow-brand-200 dark:shadow-brand-900/40 rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
                         >
                             <ShoppingBasket className="w-4 h-4" />
                             Adicionar à Lista de Compras
@@ -3341,9 +3342,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         const isExpanded = expandedMeal === meal.id;
 
                         return (
-                            <div key={meal.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <div key={meal.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden transition-colors">
                                 <div
-                                    className="p-4 flex items-center justify-between bg-gray-50 cursor-pointer"
+                                    className="p-4 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 cursor-pointer"
                                     onClick={() => setExpandedMeal(isExpanded ? null : meal.id)}
                                 >
                                     <div className="flex items-center gap-3">
@@ -3357,34 +3358,34 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                 else newConsumed.add(key);
                                                 setConsumedMeals(newConsumed);
                                             }}
-                                            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent hover:border-brand-300'}`}
+                                            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 dark:border-gray-700 text-transparent hover:border-brand-300 dark:hover:border-brand-600'}`}
                                         >
                                             <Check className="w-5 h-5" />
                                         </button>
                                         <div>
-                                            <h4 className={`font-bold transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'text-green-700 line-through opacity-70' : 'text-gray-900'}`}>{meal.name}</h4>
-                                            <span className="text-xs text-gray-500 font-medium">{meal.time} • {getComputedMealCalories(meal, selectedDateKey)} kcal</span>
+                                            <h4 className={`font-bold transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'text-green-700 dark:text-green-400 line-through opacity-70' : 'text-gray-900 dark:text-white'}`}>{meal.name}</h4>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{meal.time} • {getComputedMealCalories(meal, selectedDateKey)} kcal</span>
                                         </div>
                                     </div>
-                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
                                 </div>
 
                                 {isExpanded && (
-                                    <div className="p-4 border-t border-gray-100">
+                                    <div className="p-4 border-t border-gray-100 dark:border-gray-800">
                                         {/* Option Selector */}
                                         <div className="mb-4">
-                                            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Opção do Cardápio</label>
+                                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1 block">Opção do Cardápio</label>
 
                                             <select
                                                 value={selectedOptionIndex}
                                                 onChange={(e) => handleSelectOption(meal.id, Number(e.target.value))}
-                                                className="w-full p-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-brand-500 focus:border-brand-500"
+                                                className="w-full p-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-brand-500 focus:border-brand-500"
                                             >
                                                 {options.map((opt, idx) => (
                                                     <option key={opt.id} value={idx}>{opt.name}</option>
                                                 ))}
                                             </select>
-                                            <p className="text-xs text-gray-500 mt-1 italic">{selectedOption?.description || ""}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{selectedOption?.description || ""}</p>
                                         </div>
 
                                         {/* Ingredients List */}
@@ -3395,12 +3396,12 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                 return (
                                                     <div
                                                         key={idx}
-                                                        className={`flex justify - between items - center text - sm p - 2 rounded border border - gray - 100 transition - all cursor - pointer ${isExcluded ? 'bg-gray-100 opacity-60' : 'bg-gray-50 hover:bg-gray-100'
+                                                        className={`flex justify-between items-center text-sm p-2 rounded border border-gray-100 dark:border-gray-800 transition-all cursor-pointer ${isExcluded ? 'bg-gray-100 dark:bg-gray-800 opacity-60' : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700'
                                                             } `}
                                                         onClick={() => !hasCustomItems && handleToggleIngredient(meal.id, idx)}
                                                         title={hasCustomItems ? "" : "Clique para riscar/incluir este item"}
                                                     >
-                                                        <span className={`text - gray - 700 ${isExcluded ? 'line-through text-gray-400' : ''} `}>
+                                                        <span className={`text-gray-700 dark:text-gray-200 ${isExcluded ? 'line-through text-gray-400 dark:text-gray-500' : ''} `}>
                                                             <span className="font-bold">{(item as FoodItem).portion || (item as any).amount}</span> {(item as FoodItem).name || (item as any).name}
                                                         </span>
                                                         {hasCustomItems && (
@@ -3430,7 +3431,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleOpenFoodModal(meal.id)}
-                                                className="flex-1 py-2 px-3 bg-white border border-brand-200 text-brand-700 text-xs font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-brand-50"
+                                                className="flex-1 py-2 px-3 bg-white dark:bg-gray-800 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-400 text-xs font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-brand-50 dark:hover:bg-brand-900/40 transition-colors"
                                             >
                                                 <Plus className="w-3 h-3" /> Adicionar Alimento
                                             </button>
@@ -3438,7 +3439,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                             {customItems && customItems.length > 0 && (
                                                 <button
                                                     onClick={(e) => handleSaveCustomOptionClick(meal.id, e)}
-                                                    className="flex-1 py-2 px-3 bg-brand-100 text-brand-700 text-xs font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-brand-200"
+                                                    className="flex-1 py-2 px-3 bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 text-xs font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-brand-200 dark:hover:bg-brand-800 transition-colors"
                                                 >
                                                     <Save className="w-3 h-3" /> Salvar Opção
                                                 </button>
@@ -3463,9 +3464,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                     <button
                         onClick={handleAddMeal}
-                        className="w-full py-6 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:text-brand-600 hover:border-brand-300 hover:bg-brand-50 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
+                        className="w-full py-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
                     >
-                        <div className="bg-gray-50 p-2 rounded-full group-hover:bg-brand-100 transition-colors">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-full group-hover:bg-brand-100 dark:group-hover:bg-brand-900/40 transition-colors">
                             <PlusCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
                         </div>
                         <span className="text-sm">Adicionar Nova Refeição</span>
@@ -3486,7 +3487,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
             <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
                 {/* Header Card - SEMPRE VISÍVEL */}
-                <div className="bg-brand-600 text-white rounded-2xl p-6 shadow-lg shadow-brand-200">
+                <div className="bg-brand-600 dark:bg-brand-700 text-white rounded-2xl p-6 shadow-lg shadow-brand-200 dark:shadow-brand-900/40">
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             <h2 className="text-2xl font-bold">Lista de Compras</h2>
@@ -3532,7 +3533,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                 {/* Content: Empty State OU Lista */}
                 {calculatedShoppingList.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl transition-colors">
                         <ShoppingBasket className="w-16 h-16 mb-4 opacity-20" />
                         <p className="text-center px-8 text-sm">Sua lista está vazia.</p>
                         <p className="text-center px-8 text-xs mt-2">Vá na aba <strong>Dieta</strong> e adicione dias ao seu planejamento para gerar a lista.</p>
@@ -3540,10 +3541,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 ) : (
                     <>
                         {/* List */}
-                        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                            <div className="p-4 bg-gray-50 border-b border-gray-200 font-bold text-gray-700 flex justify-between">
+                        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm transition-colors">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800 font-bold text-gray-700 dark:text-gray-200 flex justify-between">
                                 <span>Itens Pendentes ({activeItems.length})</span>
-                                <button onClick={handlePrint} className="text-gray-400 hover:text-gray-600">
+                                <button onClick={handlePrint} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                                     <Printer className="w-4 h-4" />
                                 </button>
                             </div>
@@ -3551,17 +3552,17 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             {activeItems.map((item, idx) => {
                                 const key = `${item.name}__${item.unit}`;
                                 return (
-                                    <div key={key} className={`flex items - center p - 4 border - b border - gray - 100 last: border - 0 hover: bg - gray - 50 transition - colors`}>
+                                    <div key={key} className={`flex items-center p-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors`}>
                                         <button
                                             onClick={() => handleToggleShoppingItem(key)}
-                                            className="w-6 h-6 rounded border-2 border-gray-300 mr-4 flex items-center justify-center text-white hover:border-brand-400"
+                                            className="w-6 h-6 rounded border-2 border-gray-300 dark:border-gray-700 mr-4 flex items-center justify-center text-white hover:border-brand-400 dark:hover:border-brand-600"
                                         >
                                         </button>
                                         <div className="flex-1">
-                                            <p className="font-medium text-gray-800">{item.name}</p>
-                                            <p className="text-xs text-gray-400">{item.category}</p>
+                                            <p className="font-medium text-gray-800 dark:text-gray-100">{item.name}</p>
+                                            <p className="text-xs text-gray-400 dark:text-gray-500">{item.category}</p>
                                         </div>
-                                        <div className="font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded text-sm">
+                                        <div className="font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm">
                                             {formatShoppingQuantity(item.quantity, item.unit)}
                                         </div>
                                     </div>
@@ -3571,31 +3572,31 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
                         {/* Completed Items Accordion */}
                         {completedItemsList.length > 0 && (
-                            <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden transition-colors">
                                 <button
                                     onClick={() => setShowCompletedItems(!showCompletedItems)}
-                                    className="w-full flex items-center justify-between p-4 bg-gray-50 text-gray-500 text-sm font-medium"
+                                    className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-sm font-medium"
                                 >
                                     <span>Itens Comprados ({completedItemsList.length})</span>
-                                    {showCompletedItems ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    {showCompletedItems ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />}
                                 </button>
 
                                 {showCompletedItems && (
-                                    <div className="bg-gray-50/50">
+                                    <div className="bg-gray-50/50 dark:bg-gray-800/30">
                                         {completedItemsList.map((item) => {
                                             const key = `${item.name}__${item.unit}`;
                                             return (
-                                                <div key={key} className="flex items-center p-4 border-t border-gray-100 opacity-60">
+                                                <div key={key} className="flex items-center p-4 border-t border-gray-100 dark:border-gray-800 opacity-60">
                                                     <button
                                                         onClick={() => handleToggleShoppingItem(key)}
                                                         className="w-6 h-6 rounded border-2 border-green-500 bg-green-500 mr-4 flex items-center justify-center text-white"
                                                     >
                                                         <Check className="w-4 h-4" />
                                                     </button>
-                                                    <div className="flex-1 line-through text-gray-500">
+                                                    <div className="flex-1 line-through text-gray-500 dark:text-gray-400">
                                                         {item.name}
                                                     </div>
-                                                    <div className="text-gray-400 text-sm">
+                                                    <div className="text-gray-400 dark:text-gray-500 text-sm">
                                                         {formatShoppingQuantity(item.quantity, item.unit)}
                                                     </div>
                                                 </div>
@@ -3627,37 +3628,37 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         if (calendarMode === 'menu') {
             return (
                 <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm text-center">
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Central de Calendários</h2>
-                        <p className="text-sm text-gray-500 mb-6">Escolha o que você deseja visualizar:</p>
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm text-center">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Central de Calendários</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Escolha o que você deseja visualizar:</p>
 
                         <div className="grid grid-cols-1 gap-4">
                             <button
                                 onClick={() => setCalendarMode('workout')}
-                                className="bg-brand-50 hover:bg-brand-100 border border-brand-200 p-4 rounded-xl flex items-center gap-4 transition-colors group text-left"
+                                className="bg-brand-50 dark:bg-brand-900/20 hover:bg-brand-100 dark:hover:bg-brand-900/40 border border-brand-200 dark:border-brand-800 p-4 rounded-xl flex items-center gap-4 transition-colors group text-left"
                             >
-                                <div className="bg-white p-3 rounded-full border border-brand-100 shadow-sm group-hover:scale-110 transition-transform">
-                                    <Dumbbell className="w-6 h-6 text-brand-600" />
+                                <div className="bg-white dark:bg-gray-800 p-3 rounded-full border border-brand-100 dark:border-brand-900 shadow-sm group-hover:scale-110 transition-transform">
+                                    <Dumbbell className="w-6 h-6 text-brand-600 dark:text-brand-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-brand-900">Histórico de Treinos</h3>
-                                    <p className="text-xs text-brand-700">Veja sua constância e dias treinados.</p>
+                                    <h3 className="font-bold text-brand-900 dark:text-brand-300">Histórico de Treinos</h3>
+                                    <p className="text-xs text-brand-700 dark:text-brand-500">Veja sua constância e dias treinados.</p>
                                 </div>
-                                <ChevronRight className="ml-auto text-brand-400 w-5 h-5" />
+                                <ChevronRight className="ml-auto text-brand-400 dark:text-brand-600 w-5 h-5" />
                             </button>
 
                             <button
                                 onClick={() => setCalendarMode('diet')}
-                                className="bg-orange-50 hover:bg-orange-100 border border-orange-200 p-4 rounded-xl flex items-center gap-4 transition-colors group text-left"
+                                className="bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/40 border border-orange-200 dark:border-orange-800 p-4 rounded-xl flex items-center gap-4 transition-colors group text-left"
                             >
-                                <div className="bg-white p-3 rounded-full border border-orange-100 shadow-sm group-hover:scale-110 transition-transform">
-                                    <Apple className="w-6 h-6 text-orange-600" />
+                                <div className="bg-white dark:bg-gray-800 p-3 rounded-full border border-orange-100 dark:border-orange-900 shadow-sm group-hover:scale-110 transition-transform">
+                                    <Apple className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-orange-900">Planejamento de Dieta</h3>
-                                    <p className="text-xs text-orange-700">Dias planejados e salvos.</p>
+                                    <h3 className="font-bold text-orange-900 dark:text-orange-300">Planejamento de Dieta</h3>
+                                    <p className="text-xs text-orange-700 dark:text-orange-500">Dias planejados e salvos.</p>
                                 </div>
-                                <ChevronRight className="ml-auto text-orange-400 w-5 h-5" />
+                                <ChevronRight className="ml-auto text-orange-400 dark:text-orange-600 w-5 h-5" />
                             </button>
                         </div>
                     </div>
@@ -3676,36 +3677,36 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         return (
             <div className="space-y-6 pb-20 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between mb-4">
-                    <button onClick={() => setCalendarMode('menu')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500 flex items-center gap-1 text-sm font-bold">
+                    <button onClick={() => setCalendarMode('menu')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 dark:text-gray-400 flex items-center gap-1 text-sm font-bold transition-colors">
                         <ArrowLeft className="w-4 h-4" /> Voltar
                     </button>
-                    <span className={`text - xs font - bold px - 2 py - 1 rounded uppercase ${isDiet ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-700'} `}>
+                    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${isDiet ? 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400' : 'bg-brand-100 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400'} `}>
                         {isDiet ? 'Calendário de Dieta' : 'Calendário de Treinos'}
                     </span>
                 </div>
 
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                     {/* Header Month Nav */}
                     <div className="flex justify-between items-center mb-6">
                         <button onClick={() => {
                             const d = new Date(calendarMonth);
                             d.setMonth(d.getMonth() - 1);
                             setCalendarMonth(d);
-                        }} className="p-1 hover:bg-gray-100 rounded-full"><ChevronLeft className="w-6 h-6 text-gray-400" /></button>
+                        }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-gray-400 dark:text-gray-500" /></button>
 
-                        <h3 className="font-bold text-gray-900 text-lg capitalize">{monthName} {year}</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg capitalize">{monthName} {year}</h3>
 
                         <button onClick={() => {
                             const d = new Date(calendarMonth);
                             d.setMonth(d.getMonth() + 1);
                             setCalendarMonth(d);
-                        }} className="p-1 hover:bg-gray-100 rounded-full"><ChevronRight className="w-6 h-6 text-gray-400" /></button>
+                        }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"><ChevronRight className="w-6 h-6 text-gray-400 dark:text-gray-500" /></button>
                     </div>
 
                     {/* Weekday Headers */}
                     <div className="grid grid-cols-7 mb-2 text-center">
                         {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                            <div key={i} className="text-xs font-bold text-gray-400">{d}</div>
+                            <div key={i} className="text-xs font-bold text-gray-400 dark:text-gray-500">{d}</div>
                         ))}
                     </div>
 
@@ -3753,10 +3754,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                         }
                                     }}
                                     className={`h - 12 rounded - lg flex flex - col items - center justify - center relative transition - all border 
-                    ${isToday ? 'ring-1 ring-brand-100 font-bold' : ''}
-                    ${isSelected ? (isDiet ? 'border-orange-500 bg-orange-50' : 'border-brand-500 bg-brand-50') : 'border-transparent hover:bg-gray-50'}
-                    ${!isDiet && workoutLog.has(dKey) && !isSelected ? 'bg-green-50/50' : ''}
-text - gray - 700
+                    ${isToday ? 'ring-1 ring-brand-100 dark:ring-brand-900 font-bold' : ''}
+                    ${isSelected ? (isDiet ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40' : 'border-brand-500 bg-brand-50 dark:bg-brand-950/40') : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'}
+                    ${!isDiet && workoutLog.has(dKey) && !isSelected ? 'bg-green-50/50 dark:bg-green-950/20' : ''}
+                    text - gray - 700 dark:text-gray-300
     `}
                                 >
                                     <span className={`z - 10 ${statusIndicator ? 'mb-2' : ''} `}>{day}</span>
@@ -3767,12 +3768,12 @@ text - gray - 700
                     </div>
                 </div>
 
-                <div className={`p - 4 rounded - xl border ${isDiet ? 'bg-orange-50 border-orange-100' : 'bg-brand-50 border-brand-100'} `}>
-                    <h4 className={`font - bold text - sm mb - 2 flex items - center gap - 2 ${isDiet ? 'text-orange-800' : 'text-brand-800'} `}>
+                <div className={`p-4 rounded-xl border ${isDiet ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/50' : 'bg-brand-50 dark:bg-brand-950/20 border-brand-100 dark:border-brand-900/50'} `}>
+                    <h4 className={`font-bold text-sm mb-2 flex items-center gap-2 ${isDiet ? 'text-orange-800 dark:text-orange-300' : 'text-brand-800 dark:text-brand-300'} `}>
                         <CalendarRange className="w-4 h-4" />
                         Legenda
                     </h4>
-                    <div className="space-y-2 text-xs text-gray-600">
+                    <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
                         {isDiet ? (
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -3780,38 +3781,38 @@ text - gray - 700
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 bg-green-100 border border-green-200 rounded flex items-center justify-center text-[8px] font-bold text-green-800">T</div>
+                                <div className="w-4 h-4 bg-green-100 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded flex items-center justify-center text-[8px] font-bold text-green-800 dark:text-green-400">T</div>
                                 <span>Treino Realizado (com foco)</span>
                             </div>
                         )}
                         {isDiet ? (
-                            <p className="mt-2 text-orange-700 italic">Clique em um dia para ver ou editar a dieta.</p>
+                            <p className="mt-2 text-orange-700 dark:text-orange-400 italic">Clique em um dia para ver ou editar a dieta.</p>
                         ) : (
-                            <p className="mt-2 text-brand-700 italic">Clique em um dia acima para ver os detalhes do treino.</p>
+                            <p className="mt-2 text-brand-700 dark:text-brand-400 italic">Clique em um dia acima para ver os detalhes do treino.</p>
                         )}
                     </div>
                 </div>
 
                 {/* WORKOUT SUMMARY FOR SELECTED DATE (ONLY IN WORKOUT MODE) */}
                 {!isDiet && selectedWorkoutExercises && (
-                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2 mt-4">
-                        <div className="bg-gray-50 p-4 border-b border-gray-100">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2 mt-4 transition-colors">
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-b border-gray-100 dark:border-gray-800">
                             <div className="flex justify-between items-start mb-1">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                                     {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                                 </p>
                                 {isSelectedDayDone ? (
-                                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                    <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                                         <CheckCircle2 className="w-3 h-3" /> Realizado
                                     </span>
                                 ) : (
-                                    selectedWorkoutExercises.length > 0 && <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">Pendente</span>
+                                    selectedWorkoutExercises.length > 0 && <span className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full text-xs font-bold">Pendente</span>
                                 )}
                             </div>
 
                             <div>
-                                <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest block mb-0.5">Foco do Treino</span>
-                                <h3 className="font-black text-gray-900 text-2xl flex items-center gap-2 leading-none">
+                                <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest block mb-0.5">Foco do Treino</span>
+                                <h3 className="font-black text-gray-900 dark:text-white text-2xl flex items-center gap-2 leading-none">
                                     {selectedWorkoutSession.focus}
                                 </h3>
                             </div>
@@ -3864,13 +3865,13 @@ text - gray - 700
 
         return (
             <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-md">
-                <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                    <div className="p-6 bg-brand-600 text-white flex justify-between items-center">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] border border-transparent dark:border-gray-800">
+                    <div className="p-6 bg-brand-600 dark:bg-brand-500 text-white flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <Sparkles className="w-6 h-6 animate-pulse text-amber-300" />
                             <div>
-                                <h3 className="font-bold text-xl">Importação Inteligente</h3>
-                                <p className="text-brand-100 text-xs">A IA montará seu plano automaticamente</p>
+                                <h3 className="font-bold text-xl text-white">Importação Inteligente</h3>
+                                <p className="text-brand-100 dark:text-brand-200 text-xs">A IA montará seu plano automaticamente</p>
                             </div>
                         </div>
                         <button onClick={() => setIsSmartImportModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -3881,23 +3882,23 @@ text - gray - 700
                     <div className="p-6 flex-1 overflow-y-auto">
                         {importStatus === 'idle' && (
                             <div className="space-y-6">
-                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex gap-3">
-                                    <div className="bg-amber-100 p-2 rounded-lg h-fit">
-                                        <Sparkles className="w-4 h-4 text-amber-600" />
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-xl flex gap-3">
+                                    <div className="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg h-fit">
+                                        <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                                     </div>
-                                    <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-bold">
                                         Tire uma foto, envie um **PDF** ou cole o texto que você recebeu. A IA montará seu plano automaticamente!
                                     </p>
                                 </div>
 
                                 {/* Info Card: Distribuição Semanal (Mandatória) */}
-                                <div className="bg-brand-50 border border-brand-100 p-4 rounded-2xl flex items-start gap-4">
-                                    <div className="bg-brand-100 p-2 rounded-xl">
-                                        <CalendarRange className="w-5 h-5 text-brand-600" />
+                                <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800 p-4 rounded-2xl flex items-start gap-4">
+                                    <div className="bg-brand-100 dark:bg-brand-900/40 p-2 rounded-xl">
+                                        <CalendarRange className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-800 text-sm">Distribuição Semanal</h4>
-                                        <p className="text-[11px] text-gray-500 leading-relaxed mt-1">
+                                        <h4 className="font-bold text-gray-800 dark:text-white text-sm">Distribuição Semanal</h4>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-1">
                                             O app mapeará seu cardápio e treinos para cada dia da semana automaticamente seguindo seu documento.
                                         </p>
                                     </div>
@@ -3922,9 +3923,9 @@ text - gray - 700
                                             };
                                             input.click();
                                         }}
-                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition-all text-gray-500 hover:text-brand-600 group"
+                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-all text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 group bg-gray-50 dark:bg-gray-800"
                                     >
-                                        <div className="bg-gray-100 p-3 rounded-full group-hover:bg-brand-100 transition-colors">
+                                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-full group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
                                             <Camera className="w-6 h-6" />
                                         </div>
                                         <span className="font-bold text-sm">Foto / PDF</span>
@@ -3935,9 +3936,9 @@ text - gray - 700
                                             const text = prompt("Cole aqui o texto do seu plano (dieta ou treino):");
                                             if (text) handleSmartImport(text, 'text');
                                         }}
-                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition-all text-gray-500 hover:text-brand-600 group"
+                                        className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-all text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 group bg-gray-50 dark:bg-gray-800"
                                     >
-                                        <div className="bg-gray-100 p-3 rounded-full group-hover:bg-brand-100 transition-colors">
+                                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-full group-hover:bg-brand-100 dark:group-hover:bg-brand-900/50 transition-colors">
                                             <PenSquare className="w-6 h-6" />
                                         </div>
                                         <span className="font-bold text-sm">Colar Texto</span>
@@ -3951,41 +3952,41 @@ text - gray - 700
                         {importStatus === 'loading' && (
                             <div className="py-20 flex flex-col items-center justify-center gap-4">
                                 <div className="relative">
-                                    <Loader2 className="w-12 h-12 text-brand-600 animate-spin" />
+                                    <Loader2 className="w-12 h-12 text-brand-600 dark:text-brand-400 animate-spin" />
                                     <Sparkles className="absolute -top-1 -right-1 w-5 h-5 text-amber-400 animate-bounce" />
                                 </div>
                                 <div className="text-center">
-                                    <p className="font-black text-gray-800 text-lg">Processando Plano...</p>
-                                    <p className="text-sm text-gray-500 animate-pulse">Lendo seu arquivo com inteligência artificial</p>
+                                    <p className="font-black text-gray-800 dark:text-white text-lg">Processando Plano...</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">Lendo seu arquivo com inteligência artificial</p>
                                 </div>
                             </div>
                         )}
 
                         {importStatus === 'review' && importedPlan && (
                             <div className="space-y-6">
-                                <div className="p-4 bg-green-50 border border-green-100 rounded-xl flex gap-3">
-                                    <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/50 rounded-xl flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                                     <div>
-                                        <p className="text-sm text-green-800 font-bold">Resumo da Importação</p>
-                                        <p className="text-xs text-green-600">Confira abaixo o que conseguimos extrair:</p>
+                                        <p className="text-sm text-green-800 dark:text-green-300 font-bold">Resumo da Importação</p>
+                                        <p className="text-xs text-green-600 dark:text-green-400">Confira abaixo o que conseguimos extrair:</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-2">Nutrição</h4>
-                                        <p className="text-sm font-bold text-gray-800">{(importedPlan.nutrition?.meals || []).length} Refeições</p>
-                                        <p className="text-xs text-brand-600 font-medium">{importedPlan.nutrition?.targetCalories || 0} kcal diárias</p>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                                        <h4 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase mb-2">Nutrição</h4>
+                                        <p className="text-sm font-bold text-gray-800 dark:text-white">{(importedPlan.nutrition?.meals || []).length} Refeições</p>
+                                        <p className="text-xs text-brand-600 dark:text-brand-400 font-medium">{importedPlan.nutrition?.targetCalories || 0} kcal diárias</p>
                                     </div>
-                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                        <h4 className="text-xs font-black text-gray-400 uppercase mb-2">Treino</h4>
-                                        <p className="text-sm font-bold text-gray-800">{(importedPlan.workout?.weeklySchedule || []).filter(d => d.exercises && d.exercises.length > 0).length} Dias Ativos</p>
-                                        <p className="text-xs text-indigo-600 font-medium">{importedPlan.workout?.methodology ? importedPlan.workout.methodology.substring(0, 30) : ''}...</p>
+                                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                                        <h4 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase mb-2">Treino</h4>
+                                        <p className="text-sm font-bold text-gray-800 dark:text-white">{(importedPlan.workout?.weeklySchedule || []).filter(d => d.exercises && d.exercises.length > 0).length} Dias Ativos</p>
+                                        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">{importedPlan.workout?.methodology ? importedPlan.workout.methodology.substring(0, 30) : ''}...</p>
                                     </div>
                                 </div>
 
-                                <div className="bg-brand-50 p-4 rounded-xl border border-brand-100 mb-4">
-                                    <h4 className="text-[10px] font-black text-brand-700 uppercase mb-3">Escolha o que importar:</h4>
+                                <div className="bg-brand-50 dark:bg-brand-900/20 p-4 rounded-xl border border-brand-100 dark:border-brand-800 mb-4">
+                                    <h4 className="text-[10px] font-black text-brand-700 dark:text-brand-400 uppercase mb-3">Escolha o que importar:</h4>
                                     <div className="space-y-3">
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <div className="relative">
@@ -3995,12 +3996,12 @@ text - gray - 700
                                                     onChange={e => setImportDietSelected(e.target.checked)}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w - 10 h - 6 rounded - full transition - colors ${importDietSelected ? 'bg-brand-600' : 'bg-gray-300'} `}></div>
-                                                <div className={`absolute top - 1 left - 1 bg - white w - 4 h - 4 rounded - full transition - transform ${importDietSelected ? 'translate-x-4' : ''} `}></div>
+                                                <div className={`w-10 h-6 rounded-full transition-colors ${importDietSelected ? 'bg-brand-600' : 'bg-gray-300 dark:bg-gray-700'} `}></div>
+                                                <div className={`absolute top-1 left-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-transform ${importDietSelected ? 'translate-x-4' : ''} `}></div>
                                             </div>
                                             <div>
-                                                <span className="text-sm font-bold text-gray-800">Importar Dieta</span>
-                                                <p className="text-[10px] text-gray-500">Substitui sua dieta atual</p>
+                                                <span className="text-sm font-bold text-gray-800 dark:text-white">Importar Dieta</span>
+                                                <p className="text-[10px] text-gray-500 dark:text-gray-400">Substitui sua dieta atual</p>
                                             </div>
                                         </label>
 
@@ -4012,12 +4013,12 @@ text - gray - 700
                                                     onChange={e => setImportWorkoutSelected(e.target.checked)}
                                                     className="sr-only"
                                                 />
-                                                <div className={`w - 10 h - 6 rounded - full transition - colors ${importWorkoutSelected ? 'bg-indigo-600' : 'bg-gray-300'} `}></div>
-                                                <div className={`absolute top - 1 left - 1 bg - white w - 4 h - 4 rounded - full transition - transform ${importWorkoutSelected ? 'translate-x-4' : ''} `}></div>
+                                                <div className={`w-10 h-6 rounded-full transition-colors ${importWorkoutSelected ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'} `}></div>
+                                                <div className={`absolute top-1 left-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full transition-transform ${importWorkoutSelected ? 'translate-x-4' : ''} `}></div>
                                             </div>
                                             <div>
-                                                <span className="text-sm font-bold text-gray-800">Importar Treino</span>
-                                                <p className="text-[10px] text-gray-500">Substitui seu treino atual</p>
+                                                <span className="text-sm font-bold text-gray-800 dark:text-white">Importar Treino</span>
+                                                <p className="text-[10px] text-gray-500 dark:text-gray-400">Substitui seu treino atual</p>
                                             </div>
                                         </label>
                                     </div>
@@ -4026,16 +4027,16 @@ text - gray - 700
                                 {/* Botão Limpar Dias */}
                                 <button
                                     onClick={cleanDayNamesFromImportedPlan}
-                                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:text-brand-600 hover:border-brand-200 transition-all text-xs font-bold"
+                                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-gray-400 dark:text-gray-500 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-200 dark:hover:border-brand-800 transition-all text-xs font-bold"
                                 >
                                     <Eraser className="w-4 h-4" /> Limpar Nomes de Dias das Opções
                                 </button>
 
                                 <div className="flex gap-3 pt-4">
-                                    <button onClick={() => setImportStatus('idle')} className="flex-1 py-4 text-gray-500 font-bold hover:bg-gray-50 rounded-2xl transition-all">
+                                    <button onClick={() => setImportStatus('idle')} className="flex-1 py-4 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 rounded-2xl transition-all">
                                         Tentar Novamente
                                     </button>
-                                    <button onClick={confirmSmartImport} className="flex-1 py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-200 active:scale-95 transition-all">
+                                    <button onClick={confirmSmartImport} className="flex-1 py-4 bg-brand-600 dark:bg-brand-500 text-white font-bold rounded-2xl shadow-lg shadow-brand-200 dark:shadow-brand-900/40 active:scale-95 transition-all text-sm">
                                         Confirmar e Salvar
                                     </button>
                                 </div>
@@ -4048,28 +4049,35 @@ text - gray - 700
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100 transition-colors duration-300">
             {/* TOP BAR */}
-            <div className="bg-white sticky top-0 z-20 border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="bg-white dark:bg-gray-900 sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2">
-                    <div className="bg-brand-600 text-white p-1.5 rounded-lg">
+                    <div className="bg-brand-600 dark:bg-brand-500 text-white p-1.5 rounded-lg">
                         <Dumbbell className="w-5 h-5" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-lg leading-none tracking-tight text-gray-900">FitCoach<span className="text-brand-600">Pro</span></h1>
-                        <p className="text-[10px] text-gray-400 font-medium">PERSONAL AI TRAINER</p>
+                        <h1 className="font-bold text-lg leading-none tracking-tight text-gray-900 dark:text-white">FitCoach<span className="text-brand-600 dark:text-brand-400">Pro</span></h1>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase">Personal AI Trainer</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={onToggleDarkMode}
+                        className="p-2 bg-gray-50 dark:bg-gray-800 rounded-xl text-gray-500 dark:text-gray-300 border border-transparent dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
+                    >
+                        {isDarkMode ? <Flame className="w-5 h-5 text-orange-400 fill-orange-400/20" /> : <Droplets className="w-5 h-5 text-blue-500 fill-blue-500/20" />}
+                    </button>
                     {(plan.nutrition?.meals?.length || 0) < 3 && !backupPlan && (
                         <button
                             onClick={handleRepairPlan}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-[10px] font-black uppercase border border-orange-200 animate-pulse hover:bg-orange-200 transition-all"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 rounded-lg text-[10px] font-black uppercase border border-orange-200 dark:border-orange-800/50 animate-pulse hover:bg-orange-200 transition-all"
                         >
                             <RefreshCw className="w-3 h-3" /> Consertar Plano
                         </button>
                     )}
-                    <button onClick={handleResetClick} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                    <button onClick={handleResetClick} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
                         <RefreshCw className="w-5 h-5" />
                     </button>
                 </div>
@@ -4086,7 +4094,7 @@ text - gray - 700
             </div>
 
             {/* BOTTOM NAV */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 <div className="w-full max-w-md mx-auto px-6 pb-6 pt-3 flex justify-between items-center">
                     {[
                         { id: 'overview', icon: LayoutDashboard, label: 'Resumo' },
@@ -4102,9 +4110,9 @@ text - gray - 700
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex flex-col items-center gap-1 transition-all duration-300 ${isActive ? 'text-brand-600 -translate-y-1' : 'text-gray-400'}`}
+                                className={`flex flex-col items-center gap-1 transition-all duration-300 ${isActive ? 'text-brand-600 dark:text-brand-400 -translate-y-1' : 'text-gray-400 dark:text-gray-600'}`}
                             >
-                                <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-brand-50' : 'bg-transparent'}`}>
+                                <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-brand-50 dark:bg-brand-900/40' : 'bg-transparent'}`}>
                                     <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} />
                                 </div>
                                 <span className={`text-[9px] font-bold ${isActive ? 'opacity-100' : 'opacity-0 h-0 w-0 overflow-hidden'}`}>{tab.label}</span>
@@ -4118,50 +4126,50 @@ text - gray - 700
 
             {/* ADD FOOD MODAL */}
             {isFoodModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-2xl h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">Adicionar Alimento</h3>
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border border-transparent dark:border-gray-800">
+                        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">Adicionar Alimento</h3>
                             <div className="flex items-center gap-2">
                                 {currentMealIdForAdd && (
                                     <button
                                         onClick={() => startCamera(currentMealIdForAdd, 'log')}
-                                        className="p-2 bg-brand-50 text-brand-600 rounded-full hover:bg-brand-100 transition-colors"
+                                        className="p-2 bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 rounded-full hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors"
                                         title="Analisar foto do alimento"
                                     >
                                         <Camera className="w-5 h-5" />
                                     </button>
                                 )}
-                                <button onClick={() => setFoodModalOpen(false)} className="p-2 bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+                                <button onClick={() => setFoodModalOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
                             </div>
                         </div>
 
                         {/* Meal Selector inside Modal if none selected or for change */}
-                        <div className="px-4 py-2 border-b border-gray-50 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase whitespace-nowrap">Destino:</span>
+                        <div className="px-4 py-2 border-b border-gray-50 dark:border-gray-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase whitespace-nowrap">Destino:</span>
                             {(plan.nutrition?.meals || []).map(m => (
                                 <button
                                     key={m.id}
                                     onClick={() => setCurrentMealIdForAdd(m.id)}
                                     className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${currentMealIdForAdd === m.id
-                                        ? 'bg-brand-600 text-white shadow-sm'
-                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                        ? 'bg-brand-600 dark:bg-brand-500 text-white shadow-sm'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     {m.name}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex p-1 bg-gray-100 rounded-lg mx-4 mb-2">
+                        <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg mx-4 mb-2">
                             <button
                                 onClick={() => setFoodModalMode('library')}
-                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
+                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'library' ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}`}
                             >
                                 <Search className="w-3.5 h-3.5" /> Buscar
                             </button>
                             <button
                                 onClick={() => setFoodModalMode('manual')}
-                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
+                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'manual' ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}`}
                             >
                                 <Edit3 className="w-3.5 h-3.5" /> Manual
                             </button>
@@ -4177,7 +4185,7 @@ text - gray - 700
                                             placeholder="Buscar alimento (ex: Arroz, Frango)..."
                                             value={foodSearchTerm}
                                             onChange={(e) => setFoodSearchTerm(e.target.value)}
-                                            className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-brand-500 focus:border-brand-500 outline-none"
+                                            className="w-full pl-10 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 focus:border-brand-500 dark:focus:border-brand-400 outline-none text-gray-900 dark:text-white"
                                             autoFocus
                                         />
                                     </div>
@@ -4187,13 +4195,13 @@ text - gray - 700
                                         <button
                                             key={food.id}
                                             onClick={() => handleAddFood(food)}
-                                            className="w-full flex justify-between items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                                            className="w-full flex justify-between items-center p-3 border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
                                         >
                                             <div>
-                                                <p className="font-bold text-gray-800">{food.name}</p>
-                                                <p className="text-xs text-gray-500">{food.portion} • {food.calories} kcal</p>
+                                                <p className="font-bold text-gray-800 dark:text-white">{food.name}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{food.portion} • {food.calories} kcal</p>
                                             </div>
-                                            <div className="bg-brand-50 text-brand-600 p-2 rounded-lg">
+                                            <div className="bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 p-2 rounded-lg">
                                                 <Plus className="w-4 h-4" />
                                             </div>
                                         </button>
@@ -4209,7 +4217,7 @@ text - gray - 700
                                         placeholder="Ex: Pão de Queijo Caseiro"
                                         value={newManualFood.name}
                                         onChange={(e) => setNewManualFood({ ...newManualFood, name: e.target.value })}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-bold"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none font-bold text-gray-900 dark:text-white"
                                         autoFocus
                                     />
                                 </div>
@@ -4222,7 +4230,7 @@ text - gray - 700
                                             placeholder="0"
                                             value={newManualFood.calories}
                                             onChange={(e) => setNewManualFood({ ...newManualFood, calories: e.target.value })}
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-gray-900 dark:text-white"
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -4233,13 +4241,13 @@ text - gray - 700
                                                 placeholder="1"
                                                 value={newManualFood.portionValue}
                                                 onChange={(e) => setNewManualFood({ ...newManualFood, portionValue: e.target.value })}
-                                                className="w-24 p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-bold"
+                                                className="w-24 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none font-bold text-gray-900 dark:text-white"
                                             />
                                             <div className="flex-1 relative">
                                                 <select
                                                     value={newManualFood.portionUnit}
                                                     onChange={(e) => setNewManualFood({ ...newManualFood, portionUnit: e.target.value })}
-                                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-brand-500 outline-none appearance-none font-bold text-gray-700"
+                                                    className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none appearance-none font-bold text-gray-700 dark:text-gray-200"
                                                 >
                                                     <option value="g">gramas (g)</option>
                                                     <option value="unidade">unidade</option>
@@ -4254,14 +4262,14 @@ text - gray - 700
                                     </div>
                                 </div>
 
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Macros Opcionais</p>
+                                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                                    <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Macros Opcionais</p>
                                     <div className="flex gap-2">
                                         <div className="flex-1 text-center">
                                             <label className="block text-[10px] font-bold text-indigo-700 mb-1">Prot (g)</label>
                                             <input
                                                 type="number"
-                                                className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                                className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                                 value={newManualFood.protein}
                                                 onChange={(e) => setNewManualFood({ ...newManualFood, protein: e.target.value })}
                                             />
@@ -4270,7 +4278,7 @@ text - gray - 700
                                             <label className="block text-[10px] font-bold text-amber-700 mb-1">Carb (g)</label>
                                             <input
                                                 type="number"
-                                                className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                                className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                                 value={newManualFood.carbs}
                                                 onChange={(e) => setNewManualFood({ ...newManualFood, carbs: e.target.value })}
                                             />
@@ -4279,7 +4287,7 @@ text - gray - 700
                                             <label className="block text-[10px] font-bold text-rose-700 mb-1">Gord (g)</label>
                                             <input
                                                 type="number"
-                                                className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                                className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                                 value={newManualFood.fats}
                                                 onChange={(e) => setNewManualFood({ ...newManualFood, fats: e.target.value })}
                                             />
@@ -4290,7 +4298,7 @@ text - gray - 700
                                 <button
                                     onClick={handleAddManualFood}
                                     disabled={!newManualFood.name || !newManualFood.calories}
-                                    className="w-full py-3 bg-brand-600 font-bold rounded-xl text-white shadow-lg shadow-brand-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 transition-colors"
+                                    className="w-full py-3 bg-brand-600 dark:bg-brand-500 font-bold rounded-xl text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors"
                                 >
                                     Adicionar Alimento
                                 </button>
@@ -4302,11 +4310,11 @@ text - gray - 700
 
             {/* EDIT FOOD MODAL */}
             {isEditFoodModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+                <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-4 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border border-transparent dark:border-gray-800">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-lg">Editar Alimento</h3>
-                            <button onClick={() => setIsEditFoodModalOpen(false)} className="p-2 bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">Editar Alimento</h3>
+                            <button onClick={() => setIsEditFoodModalOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
                         </div>
 
                         <div className="space-y-4">
@@ -4316,7 +4324,7 @@ text - gray - 700
                                     type="text"
                                     value={editFoodForm.name}
                                     onChange={(e) => setEditFoodForm({ ...editFoodForm, name: e.target.value })}
-                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-bold text-gray-700"
+                                    className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 outline-none font-bold text-gray-700 dark:text-gray-200"
                                 />
                             </div>
 
@@ -4327,7 +4335,7 @@ text - gray - 700
                                         type="number"
                                         value={editFoodForm.calories}
                                         onChange={(e) => setEditFoodForm({ ...editFoodForm, calories: e.target.value })}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 outline-none text-gray-900 dark:text-white font-bold"
                                     />
                                 </div>
                                 <div className="flex-1">
@@ -4337,7 +4345,7 @@ text - gray - 700
                                             type="number"
                                             value={editFoodForm.portionValue}
                                             onChange={(e) => setEditFoodForm({ ...editFoodForm, portionValue: e.target.value })}
-                                            className="w-24 p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none text-gray-700 font-bold"
+                                            className="w-24 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 outline-none text-gray-700 dark:text-gray-200 font-bold"
                                         />
                                         <div className="flex-1 relative">
                                             <select
@@ -4367,7 +4375,7 @@ text - gray - 700
                                             type="number"
                                             value={editFoodForm.protein}
                                             onChange={(e) => setEditFoodForm({ ...editFoodForm, protein: e.target.value })}
-                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                            className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                         />
                                     </div>
                                     <div className="flex-1 text-center">
@@ -4376,7 +4384,7 @@ text - gray - 700
                                             type="number"
                                             value={editFoodForm.carbs}
                                             onChange={(e) => setEditFoodForm({ ...editFoodForm, carbs: e.target.value })}
-                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                            className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                         />
                                     </div>
                                     <div className="flex-1 text-center">
@@ -4385,7 +4393,7 @@ text - gray - 700
                                             type="number"
                                             value={editFoodForm.fats}
                                             onChange={(e) => setEditFoodForm({ ...editFoodForm, fats: e.target.value })}
-                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                            className="w-full p-2 text-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-white font-bold"
                                         />
                                     </div>
                                 </div>
@@ -4433,60 +4441,60 @@ text - gray - 700
 
                         {/* RESULT: FOOD LOG */}
                         {analyzedFood && !isAnalyzing && cameraMode === 'log' && (
-                            <div className="absolute bottom-24 left-4 right-4 bg-white rounded-xl p-4 shadow-2xl z-20 animate-in slide-in-from-bottom-10">
+                            <div className="absolute bottom-24 left-4 right-4 bg-white dark:bg-gray-900 rounded-xl p-4 shadow-2xl z-20 animate-in slide-in-from-bottom-10 border border-transparent dark:border-gray-800">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h3 className="font-bold text-xl text-gray-900">{analyzedFood.name}</h3>
-                                        <p className="text-sm text-gray-500">{analyzedFood.portion}</p>
+                                        <h3 className="font-bold text-xl text-gray-900 dark:text-white">{analyzedFood.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{analyzedFood.portion}</p>
                                     </div>
                                     <div className="text-right">
-                                        <span className="block font-black text-2xl text-brand-600">{analyzedFood.calories}</span>
-                                        <span className="text-xs font-bold text-gray-400 uppercase">Kcal</span>
+                                        <span className="block font-black text-2xl text-brand-600 dark:text-brand-400">{analyzedFood.calories}</span>
+                                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Kcal</span>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-2 mb-4">
-                                    <div className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold flex-1 text-center">P: {analyzedFood.protein}g</div>
-                                    <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs font-bold flex-1 text-center">C: {analyzedFood.carbs}g</div>
-                                    <div className="bg-rose-50 text-rose-700 px-2 py-1 rounded text-xs font-bold flex-1 text-center">G: {analyzedFood.fats}g</div>
+                                    <div className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded text-xs font-bold flex-1 text-center">P: {analyzedFood.protein}g</div>
+                                    <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded text-xs font-bold flex-1 text-center">C: {analyzedFood.carbs}g</div>
+                                    <div className="bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 px-2 py-1 rounded text-xs font-bold flex-1 text-center">G: {analyzedFood.fats}g</div>
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <button onClick={() => startCamera(cameraTargetMealId, 'log')} className="flex-1 py-3 bg-gray-100 font-bold rounded-lg text-gray-600">Tentar Novamente</button>
-                                    <button onClick={() => handleAddFood(analyzedFood)} className="flex-1 py-3 bg-brand-600 font-bold rounded-lg text-white shadow-lg">Adicionar</button>
+                                    <button onClick={() => startCamera(cameraTargetMealId, 'log')} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 font-bold rounded-lg text-gray-600 dark:text-gray-400">Tentar Novamente</button>
+                                    <button onClick={() => handleAddFood(analyzedFood)} className="flex-1 py-3 bg-brand-600 dark:bg-brand-500 font-bold rounded-lg text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40">Adicionar</button>
                                 </div>
                             </div>
                         )}
 
                         {/* RESULT: FRUIT ANALYSIS */}
                         {fruitAnalysis && !isAnalyzing && cameraMode === 'fruit' && (
-                            <div className="absolute bottom-24 left-4 right-4 bg-white rounded-xl p-6 shadow-2xl z-20 animate-in slide-in-from-bottom-10 border border-green-100">
+                            <div className="absolute bottom-24 left-4 right-4 bg-white dark:bg-gray-900 rounded-xl p-6 shadow-2xl z-20 animate-in slide-in-from-bottom-10 border border-green-100 dark:border-green-900/30">
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
-                                        <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider bg-green-50 px-2 py-1 rounded-full border border-green-100">Resultado da Análise</span>
-                                        <h3 className="font-bold text-2xl text-gray-900 mt-2">{fruitAnalysis.name}</h3>
+                                        <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full border border-green-100 dark:border-green-900/30">Resultado da Análise</span>
+                                        <h3 className="font-bold text-2xl text-gray-900 dark:text-white mt-2">{fruitAnalysis.name}</h3>
                                     </div>
-                                    <div className={`text - center px - 3 py - 2 rounded - lg ${fruitAnalysis.quality === 'Excelente' || fruitAnalysis.quality === 'Boa'
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-red-100 text-red-600'
+                                    <div className={`text-center px-3 py-2 rounded-lg ${fruitAnalysis.quality === 'Excelente' || fruitAnalysis.quality === 'Boa'
+                                        ? 'bg-green-500 dark:bg-green-600 text-white'
+                                        : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                                         } `}>
                                         <span className="block font-black text-sm">{fruitAnalysis.quality}</span>
                                     </div>
                                 </div>
 
                                 <div className="mb-4">
-                                    <p className="font-bold text-gray-700 text-sm mb-1">Doçura: <span className="text-gray-900">{fruitAnalysis.sweetness}</span></p>
-                                    <p className="text-sm text-gray-600 leading-snug">{fruitAnalysis.details}</p>
+                                    <p className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-1">Doçura: <span className="text-gray-900 dark:text-white">{fruitAnalysis.sweetness}</span></p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug">{fruitAnalysis.details}</p>
                                 </div>
 
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                    <p className="text-xs font-bold text-blue-700 mb-1 flex items-center gap-1">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center gap-1">
                                         <Sparkles className="w-3 h-3" /> Dica de Especialista
                                     </p>
-                                    <p className="text-xs text-blue-800">{fruitAnalysis.tips}</p>
+                                    <p className="text-xs text-blue-800 dark:text-blue-200">{fruitAnalysis.tips}</p>
                                 </div>
 
-                                <button onClick={() => startCamera(null, 'fruit')} className="w-full mt-4 py-3 bg-gray-900 font-bold rounded-xl text-white shadow-lg">
+                                <button onClick={() => startCamera(null, 'fruit')} className="w-full mt-4 py-3 bg-gray-900 dark:bg-gray-800 font-bold rounded-xl text-white shadow-lg">
                                     Analisar Outra
                                 </button>
                             </div>
@@ -4508,23 +4516,23 @@ text - gray - 700
 
             {/* ADD EXERCISE MODAL */}
             {isExerciseModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 h-[85vh] flex flex-col">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 h-[85vh] flex flex-col border border-transparent dark:border-gray-800">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg">Adicionar Exercício</h3>
-                            <button onClick={() => setExerciseModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">Adicionar Exercício</h3>
+                            <button onClick={() => setExerciseModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="w-5 h-5" /></button>
                         </div>
 
-                        <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
+                        <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg mb-4">
                             <button
                                 onClick={() => setExerciseModalMode('library')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'library' ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}`}
                             >
                                 <BookOpen className="w-4 h-4" /> Biblioteca
                             </button>
                             <button
                                 onClick={() => setExerciseModalMode('manual')}
-                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'manual' ? 'bg-white dark:bg-gray-700 shadow text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'}`}
                             >
                                 <Edit3 className="w-4 h-4" /> Manual
                             </button>
@@ -4541,7 +4549,7 @@ text - gray - 700
                                             placeholder="Buscar exercício..."
                                             value={exerciseSearchTerm}
                                             onChange={(e) => setExerciseSearchTerm(e.target.value)}
-                                            className="w-full pl-9 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-brand-500 outline-none"
+                                            className="w-full pl-9 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-gray-900 dark:text-white"
                                         />
                                     </div>
                                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -4550,8 +4558,8 @@ text - gray - 700
                                                 key={group}
                                                 onClick={() => setSelectedMuscleGroup(group)}
                                                 className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedMuscleGroup === group
-                                                    ? 'bg-brand-100 text-brand-700 border border-brand-200'
-                                                    : 'bg-gray-50 text-gray-500 border border-gray-200'
+                                                    ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
+                                                    : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-500 border border-gray-200 dark:border-gray-700'
                                                     }`}
                                             >
                                                 {group}
@@ -4566,13 +4574,13 @@ text - gray - 700
                                         <button
                                             key={ex.id}
                                             onClick={() => handleSelectFromLibrary(ex)}
-                                            className="w-full text-left p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors flex justify-between items-center group"
+                                            className="w-full text-left p-3 border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex justify-between items-center group"
                                         >
                                             <div>
-                                                <p className="font-bold text-gray-800 text-sm">{ex.name}</p>
-                                                <p className="text-xs text-gray-500">{ex.group}</p>
+                                                <p className="font-bold text-gray-800 dark:text-white text-sm">{ex.name}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{ex.group}</p>
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500" />
+                                            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-brand-500" />
                                         </button>
                                     ))}
                                     {filteredExercises.length === 0 && (
@@ -4589,7 +4597,7 @@ text - gray - 700
                                         placeholder="Ex: Leg Press 45"
                                         value={newExercise.name}
                                         onChange={e => setNewExercise({ ...newExercise, name: e.target.value })}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-medium"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none font-medium text-gray-900 dark:text-white"
                                         autoFocus
                                     />
                                 </div>
@@ -4600,7 +4608,7 @@ text - gray - 700
                                             type="number"
                                             value={newExercise.sets}
                                             onChange={e => setNewExercise({ ...newExercise, sets: Number(e.target.value) })}
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-gray-900 dark:text-white font-bold"
                                         />
                                     </div>
                                     <div className="flex-1">
@@ -4610,7 +4618,7 @@ text - gray - 700
                                             placeholder="Ex: 10-12"
                                             value={newExercise.reps}
                                             onChange={e => setNewExercise({ ...newExercise, reps: e.target.value })}
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-gray-900 dark:text-white font-bold"
                                         />
                                     </div>
                                 </div>
@@ -4621,7 +4629,7 @@ text - gray - 700
                                         placeholder="Ex: 60s"
                                         value={newExercise.rest}
                                         onChange={e => setNewExercise({ ...newExercise, rest: e.target.value })}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-gray-900 dark:text-white font-bold"
                                     />
                                 </div>
                                 <div>
@@ -4631,18 +4639,18 @@ text - gray - 700
                                         placeholder="Ex: 20kg cada lado, descida lenta"
                                         value={newExercise.notes}
                                         onChange={e => setNewExercise({ ...newExercise, notes: e.target.value })}
-                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none text-sm"
+                                        className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 outline-none text-sm text-gray-900 dark:text-white"
                                     />
                                 </div>
                             </div>
                         )}
 
                         {exerciseModalMode === 'manual' && (
-                            <div className="mt-4 pt-2 border-t border-gray-100">
+                            <div className="mt-4 pt-2 border-t border-gray-100 dark:border-gray-800">
                                 <button
                                     onClick={handleAddExercise}
                                     disabled={!newExercise.name}
-                                    className="w-full py-3 bg-brand-600 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold rounded-xl text-white shadow-lg shadow-brand-200 hover:bg-brand-700 transition-colors"
+                                    className="w-full py-3 bg-brand-600 dark:bg-brand-500 disabled:bg-gray-300 dark:disabled:bg-gray-800 disabled:cursor-not-allowed font-bold rounded-xl text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40 hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors"
                                 >
                                     Confirmar e Adicionar
                                 </button>
@@ -4654,20 +4662,20 @@ text - gray - 700
 
             {/* SAVE OPTION MODAL */}
             {isSaveModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="font-bold text-lg mb-2">Salvar Opção Personalizada</h3>
-                        <p className="text-sm text-gray-500 mb-4">Dê um nome para esta combinação de alimentos para usá-la facilmente depois.</p>
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Salvar Opção Personalizada</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Dê um nome para esta combinação de alimentos para usá-la facilmente depois.</p>
                         <input
                             type="text"
                             placeholder="Ex: Meu Café da Manhã Favorito"
                             value={newOptionName}
                             onChange={e => setNewOptionName(e.target.value)}
-                            className="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:ring-brand-500 outline-none"
+                            className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-4 focus:ring-brand-500 outline-none text-gray-900 dark:text-white font-bold"
                         />
                         <div className="flex gap-3">
-                            <button onClick={() => setSaveModalOpen(false)} className="flex-1 py-3 bg-gray-100 font-bold rounded-xl text-gray-600">Cancelar</button>
-                            <button onClick={confirmSaveOption} className="flex-1 py-3 bg-brand-600 font-bold rounded-xl text-white shadow-lg shadow-brand-200">Salvar</button>
+                            <button onClick={() => setSaveModalOpen(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 font-bold rounded-xl text-gray-600 dark:text-gray-400">Cancelar</button>
+                            <button onClick={confirmSaveOption} className="flex-1 py-3 bg-brand-600 dark:bg-brand-500 font-bold rounded-xl text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40">Salvar</button>
                         </div>
                     </div>
                 </div>
@@ -4675,36 +4683,36 @@ text - gray - 700
 
             {/* PLAN DAY MODAL */}
             {isPlanDayModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center gap-3 mb-4 text-brand-600">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
+                        <div className="flex items-center gap-3 mb-4 text-brand-600 dark:text-brand-400">
                             <ShoppingBasket className="w-6 h-6" />
-                            <h3 className="font-bold text-lg text-gray-900">Adicionar à Lista</h3>
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">Adicionar à Lista</h3>
                         </div>
-                        <p className="text-sm text-gray-500 mb-6">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                             Isso irá calcular os ingredientes necessários para as refeições deste dia e adicionar à sua lista de compras.
                         </p>
 
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Cozinhar para quantas pessoas?</label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Cozinhar para quantas pessoas?</label>
                         <div className="flex items-center gap-4 mb-8">
                             <button
                                 onClick={() => setHouseholdSizeInput(Math.max(1, householdSizeInput - 1))}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                                className="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                                <span className="text-xl font-bold text-gray-600">-</span>
+                                <span className="text-xl font-bold text-gray-600 dark:text-gray-400">-</span>
                             </button>
-                            <span className="text-2xl font-bold text-gray-900 w-8 text-center">{householdSizeInput}</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white w-8 text-center">{householdSizeInput}</span>
                             <button
                                 onClick={() => setHouseholdSizeInput(householdSizeInput + 1)}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                                className="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                                <span className="text-xl font-bold text-gray-600">+</span>
+                                <span className="text-xl font-bold text-gray-600 dark:text-gray-400">+</span>
                             </button>
                         </div>
 
                         <div className="flex gap-3">
-                            <button onClick={() => setPlanDayModalOpen(false)} className="flex-1 py-3 bg-gray-100 font-bold rounded-xl text-gray-600">Cancelar</button>
-                            <button onClick={confirmPlanDay} className="flex-1 py-3 bg-brand-600 font-bold rounded-xl text-white shadow-lg shadow-brand-200">Confirmar</button>
+                            <button onClick={() => setPlanDayModalOpen(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 font-bold rounded-xl text-gray-600 dark:text-gray-400">Cancelar</button>
+                            <button onClick={confirmPlanDay} className="flex-1 py-3 bg-brand-600 dark:bg-brand-500 font-bold rounded-xl text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40">Confirmar</button>
                         </div>
                     </div>
                 </div>
@@ -4723,39 +4731,39 @@ text - gray - 700
 
             {/* DEFICIT GOAL MODAL */}
             {isDeficitModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="font-bold text-xl mb-2 text-gray-800 flex items-center gap-2">
-                            <TrendingUp className="w-6 h-6 text-blue-600" />
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
+                        <h3 className="font-bold text-xl mb-2 text-gray-800 dark:text-white flex items-center gap-2">
+                            <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                             Meta de Déficit Calórico
                         </h3>
-                        <h3 className="font-bold text-xl text-gray-800 mb-2 text-center">Meta de Déficit Semanal</h3>
-                        <p className="text-xs text-gray-500 text-center mb-6 px-4">Defina o acúmulo de queima calórica que você deseja alcançar nos últimos 7 dias.</p>
+                        <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-2 text-center">Meta de Déficit Semanal</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-6 px-4">Defina o acúmulo de queima calórica que você deseja alcançar nos últimos 7 dias.</p>
 
                         <div className="flex items-center justify-between mb-8 px-4">
                             <button
                                 onClick={() => setDeficitGoal(Math.max(500, deficitGoal - 500))}
-                                className="w-12 h-12 rounded-full border-2 border-blue-100 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                                className="w-12 h-12 rounded-full border-2 border-blue-100 dark:border-blue-900/40 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20 active:scale-95 transition-all"
                             >
-                                <span className="text-2xl font-bold text-blue-600">-</span>
+                                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">-</span>
                             </button>
                             <div className="flex-1 text-center">
-                                <div className="text-4xl font-black text-blue-600">{deficitGoal}</div>
-                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">kcal acumuladas</div>
+                                <div className="text-4xl font-black text-blue-600 dark:text-blue-400">{deficitGoal}</div>
+                                <div className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-tight">kcal acumuladas</div>
                             </div>
                             <button
                                 onClick={() => setDeficitGoal(Math.min(15000, deficitGoal + 500))}
-                                className="w-12 h-12 rounded-full border-2 border-blue-100 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                                className="w-12 h-12 rounded-full border-2 border-blue-100 dark:border-blue-900/40 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20 active:scale-95 transition-all"
                             >
-                                <span className="text-2xl font-bold text-blue-600">+</span>
+                                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">+</span>
                             </button>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-2xl mb-6 mx-4">
-                            <div className="text-[10px] font-bold text-blue-700 uppercase mb-2 tracking-wider">Equivalência Estimada</div>
-                            <div className="text-sm text-blue-900 leading-relaxed">
-                                Com este déficit, você perderá cerca de <strong className="text-blue-600">{(deficitGoal / 7700).toFixed(2)} kg</strong> de gordura por semana.
-                                <div className="text-[10px] text-blue-400 mt-2 italic font-medium">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-2xl mb-6 mx-4 border border-transparent dark:border-blue-900/50">
+                            <div className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase mb-2 tracking-wider">Equivalência Estimada</div>
+                            <div className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">
+                                Com este déficit, você perderá cerca de <strong className="text-blue-600 dark:text-blue-400">{(deficitGoal / 7700).toFixed(2)} kg</strong> de gordura por semana.
+                                <div className="text-[10px] text-blue-400 dark:text-blue-500 mt-2 italic font-medium">
                                     * Referência: 7.700 kcal = 1kg de gordura. Os resultados reais podem variar conforme o metabolismo individual.
                                 </div>
                             </div>
@@ -4767,7 +4775,7 @@ text - gray - 700
                                 setDeficitStartDate(todayKey);
                                 alert("Contagem de déficit reiniciada a partir de hoje!");
                             }}
-                            className="w-[calc(100%-2rem)] mx-4 py-3 mb-6 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                            className="w-[calc(100%-2rem)] mx-4 py-3 mb-6 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors flex items-center justify-center gap-2"
                         >
                             <CalendarRange className="w-4 h-4" />
                             Começar contagem hoje
@@ -4776,13 +4784,13 @@ text - gray - 700
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setIsDeficitModalOpen(false)}
-                                className="flex-1 py-3 bg-gray-100 font-bold rounded-xl text-gray-600 hover:bg-gray-200 transition-colors"
+                                className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                             >
                                 Fechar
                             </button>
                             <button
                                 onClick={() => setIsDeficitModalOpen(false)}
-                                className="flex-1 py-3 bg-blue-600 font-bold rounded-xl text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
+                                className="flex-1 py-3 bg-blue-600 dark:bg-blue-500 font-bold rounded-xl text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/40 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                             >
                                 Salvar
                             </button>
@@ -4794,10 +4802,10 @@ text - gray - 700
 
             {/* GOALS MODAL */}
             {isGoalsModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-md">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-xl text-gray-800">Editar Metas Diárias</h3>
+                            <h3 className="font-bold text-xl text-gray-800 dark:text-white">Editar Metas Diárias</h3>
                             <button
                                 onClick={() => {
                                     // Reset to plan defaults
@@ -4809,7 +4817,7 @@ text - gray - 700
                                     };
                                     setCustomTargets(defaults);
                                 }}
-                                className="text-[10px] font-bold text-brand-600 hover:underline uppercase"
+                                className="text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline uppercase"
                             >
                                 Resetar para o Plano
                             </button>
@@ -4822,7 +4830,7 @@ text - gray - 700
                                     type="number"
                                     value={customTargets.calories}
                                     onChange={e => setCustomTargets({ ...customTargets, calories: Number(e.target.value) })}
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-900"
+                                    className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-900 dark:text-white"
                                 />
                             </div>
                             <div className="grid grid-cols-3 gap-3">
@@ -4832,7 +4840,7 @@ text - gray - 700
                                         type="number"
                                         value={customTargets.protein}
                                         onChange={e => setCustomTargets({ ...customTargets, protein: Number(e.target.value) })}
-                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                        className="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 dark:text-white text-center"
                                     />
                                 </div>
                                 <div>
@@ -4841,7 +4849,7 @@ text - gray - 700
                                         type="number"
                                         value={customTargets.carbs}
                                         onChange={e => setCustomTargets({ ...customTargets, carbs: Number(e.target.value) })}
-                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                        className="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 dark:text-white text-center"
                                     />
                                 </div>
                                 <div>
@@ -4850,7 +4858,7 @@ text - gray - 700
                                         type="number"
                                         value={customTargets.fats}
                                         onChange={e => setCustomTargets({ ...customTargets, fats: Number(e.target.value) })}
-                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 text-center"
+                                        className="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none font-bold text-gray-800 dark:text-white text-center"
                                     />
                                 </div>
                             </div>
@@ -4864,7 +4872,7 @@ text - gray - 700
                         </button>
                         <button
                             onClick={() => setIsGoalsModalOpen(false)}
-                            className="w-full mt-2 py-3 text-gray-400 text-sm font-bold hover:bg-gray-50 rounded-xl transition-colors"
+                            className="w-full mt-2 py-3 text-gray-400 dark:text-gray-500 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
                         >
                             Cancelar
                         </button>
@@ -4885,33 +4893,33 @@ text - gray - 700
 
             {/* EXTRA CALORIES MODAL */}
             {isExtraCaloriesModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h3 className="text-xl font-black text-gray-800">Calorias Extras</h3>
-                                <p className="text-xs text-gray-400 font-bold uppercase">Ajuste Manual</p>
+                                <h3 className="text-xl font-black text-gray-800 dark:text-white">Calorias Extras</h3>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Ajuste Manual</p>
                             </div>
-                            <button onClick={() => setExtraCaloriesModalOpen(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100">
-                                <X className="w-5 h-5 text-gray-400" />
+                            <button onClick={() => setExtraCaloriesModalOpen(false)} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <X className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                             </button>
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Calorias Ativas (Relógio/Treino)</label>
+                            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Calorias Ativas (Relógio/Treino)</label>
                             <input
                                 type="number"
                                 value={newExtraCalories}
                                 onChange={(e) => setNewExtraCalories(e.target.value)}
-                                className="w-full text-4xl font-black text-center text-brand-600 bg-brand-50 border border-brand-100 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                                className="w-full text-4xl font-black text-center text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-900/50 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                                 autoFocus
                             />
-                            <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">Isso será somado ao seu metabolismo basal.</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center mt-2 font-medium">Isso será somado ao seu metabolismo basal.</p>
                         </div>
 
                         <button
                             onClick={handleSaveExtraCalories}
-                            className="w-full py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 active:scale-[0.98] transition-all"
+                            className="w-full py-4 bg-brand-600 dark:bg-brand-500 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 dark:shadow-brand-900/40 active:scale-[0.98] transition-all"
                         >
                             Salvar Ajuste
                         </button>
