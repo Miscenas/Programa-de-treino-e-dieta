@@ -1892,7 +1892,10 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
                             const totalExpended = bmr + todayData.calories_burned;
-                            const actualDeficit = totalExpended - todayConsumedCalories;
+                            // Only show deficit if user has consumed calories
+                            const actualDeficit = todayConsumedCalories > 0
+                                ? totalExpended - todayConsumedCalories
+                                : 0;
 
                             return (
                                 <div className="relative">
