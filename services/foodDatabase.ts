@@ -24,8 +24,8 @@ export const foodDatabase: FoodItem[] = [
   { id: '38', name: 'Rap10 / Tortilha (Integral)', calories: 120, protein: 3, carbs: 20, fats: 3, portion: '1 unidade', category: 'snack' },
 
   // --- LEGUMINOSAS (Feijões) ---
-  { id: '2', name: 'Feijão Carioca (Cozido)', calories: 76, protein: 4.8, carbs: 13.6, fats: 0.5, portion: '1 concha média', category: 'meal' },
-  { id: '39', name: 'Feijão Preto (Cozido)', calories: 77, protein: 4.5, carbs: 14, fats: 0.5, portion: '1 concha média', category: 'meal' },
+  { id: '2', name: 'Feijão Carioca (Cozido)', calories: 76, protein: 4.8, carbs: 13.6, fats: 0.5, portion: '1 concha média (100g)', category: 'meal' },
+  { id: '39', name: 'Feijão Preto (Cozido)', calories: 77, protein: 4.5, carbs: 14, fats: 0.5, portion: '1 concha média (100g)', category: 'meal' },
   { id: '40', name: 'Lentilha (Cozida)', calories: 116, protein: 9, carbs: 20, fats: 0.4, portion: '100g', category: 'meal' },
   { id: '41', name: 'Grão de Bico (Cozido)', calories: 164, protein: 9, carbs: 27, fats: 2.6, portion: '100g', category: 'meal' },
   { id: '42', name: 'Ervilha (Cozida)', calories: 80, protein: 5, carbs: 14, fats: 0.4, portion: '100g', category: 'meal' },
@@ -100,6 +100,8 @@ export const foodDatabase: FoodItem[] = [
   { id: '91', name: 'Café (Sem Açúcar)', calories: 3, protein: 0, carbs: 0.5, fats: 0, portion: '1 xícara', category: 'drink' },
   { id: '92', name: 'Suco de Laranja (Natural)', calories: 120, protein: 2, carbs: 28, fats: 0, portion: '1 copo (250ml)', category: 'drink' },
   { id: '93', name: 'Suco de Uva (Integral)', calories: 140, protein: 1, carbs: 35, fats: 0, portion: '1 copo (250ml)', category: 'drink' },
+  { id: '101', name: 'Café com Leite (Integral)', calories: 60, protein: 3, carbs: 4.5, fats: 3, portion: '1 xícara (200ml)', category: 'drink' },
+  { id: '102', name: 'Café com Leite (Desnatado)', calories: 35, protein: 3, carbs: 5, fats: 0, portion: '1 xícara (200ml)', category: 'drink' },
   { id: '94', name: 'Água de Coco', calories: 45, protein: 0, carbs: 11, fats: 0, portion: '1 copo (200ml)', category: 'drink' },
 
   // --- "LIXO" / SUBSTITUIÇÕES LIVRES ---

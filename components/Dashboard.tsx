@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot, Lock, Unlock } from 'lucide-react';
 import { FoodPreferencesModal } from './FoodPreferencesModal';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory, generatePlan } from '../services/expertSystem';
@@ -213,6 +213,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     // NEW: Tracking states for Overview
     const [workoutLog, setWorkoutLog] = useState<Set<string>>(new Set());
     const [consumedMeals, setConsumedMeals] = useState<Set<string>>(new Set());
+    const [closedDays, setClosedDays] = useState<Set<string>>(new Set());
 
     // --- PROGRESS TRACKING STATE ---
     // Map DateString (YYYY-MM-DD) -> number
@@ -349,7 +350,13 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     const [currentDayForAddExercise, setCurrentDayForAddExercise] = useState<string | null>(null);
     const [foodSearchTerm, setFoodSearchTerm] = useState('');
     const [foodModalMode, setFoodModalMode] = useState<'library' | 'manual'>('library');
-    const [newManualFood, setNewManualFood] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', portion: '1 porção' });
+    const [newManualFood, setNewManualFood] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', portionValue: '1', portionUnit: 'unidade' });
+
+    // State for Editing Food
+    const [isEditFoodModalOpen, setIsEditFoodModalOpen] = useState(false);
+    const [editingFoodData, setEditingFoodData] = useState<{ mealId: string, index: number, food: FoodItem } | null>(null);
+    const [editFoodForm, setEditFoodForm] = useState({ name: '', calories: '', protein: '', carbs: '', fats: '', portionValue: '', portionUnit: '' });
+    const [baseEditValues, setBaseEditValues] = useState({ calories: 0, protein: 0, carbs: 0, fats: 0, portionValue: 0 });
 
     // Exercise Modal State
     const [exerciseModalMode, setExerciseModalMode] = useState<'library' | 'manual'>('library');
@@ -844,6 +851,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         const savedConsumed = localStorage.getItem('fitcoach_consumed_meals');
         if (savedConsumed) setConsumedMeals(new Set(JSON.parse(savedConsumed)));
 
+        const savedClosedDays = localStorage.getItem('fitcoach_closed_days');
+        if (savedClosedDays) setClosedDays(new Set(JSON.parse(savedClosedDays)));
+
         const savedCustomWorkouts = localStorage.getItem('fitcoach_custom_workouts');
         if (savedCustomWorkouts) setCustomWorkouts(JSON.parse(savedCustomWorkouts));
 
@@ -899,6 +909,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     useEffect(() => {
         localStorage.setItem('fitcoach_consumed_meals', JSON.stringify([...consumedMeals]));
     }, [consumedMeals]);
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_closed_days', JSON.stringify([...closedDays]));
+    }, [closedDays]);
 
     useEffect(() => {
         localStorage.setItem('fitcoach_custom_workouts', JSON.stringify(customWorkouts));
@@ -959,6 +973,137 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         fetchMeasurements();
     }, [userId]);
 
+    // --- CLOUD SYNC LOGIC ---
+
+    // 1. Fetch Cloud Data when user or week changes
+    useEffect(() => {
+        const fetchCloudData = async () => {
+            if (!userId) return;
+
+            const today = new Date();
+            const pastDate = new Date();
+            pastDate.setDate(today.getDate() - 30);
+
+            const { data, error } = await supabase
+                .from('user_daily_tracking')
+                .select('*')
+                .eq('user_id', userId)
+                .gte('date', pastDate.toISOString().split('T')[0]);
+
+            if (error) {
+                console.error("Error fetching cloud data:", error);
+                return;
+            }
+
+            if (data && data.length > 0) {
+                const cloudConsumed = new Set<string>();
+                const cloudWorkoutLog = new Set<string>();
+                const cloudClosedDays = new Set<string>();
+                const cloudSelections: Record<string, number> = {};
+
+                data.forEach((row: any) => {
+                    const dKey = row.date;
+
+                    if (row.consumed_meals && Array.isArray(row.consumed_meals)) {
+                        row.consumed_meals.forEach((mId: string) => {
+                            cloudConsumed.add(`${dKey}_${mId}`);
+                        });
+                    }
+
+                    if (row.workout_completed) {
+                        cloudWorkoutLog.add(dKey);
+                    }
+
+                    if (row.closed_day) {
+                        cloudClosedDays.add(dKey);
+                    }
+
+                    if (row.meal_selections) {
+                        Object.entries(row.meal_selections).forEach(([mId, optIdx]) => {
+                            cloudSelections[`${dKey}_${mId}`] = Number(optIdx);
+                        });
+                    }
+
+                    if (row.extra_calories) {
+                        setExtraCalories(prev => ({ ...prev, [dKey]: row.extra_calories }));
+                    }
+                });
+
+                setConsumedMeals(prev => {
+                    const next = new Set(prev);
+                    cloudConsumed.forEach(k => next.add(k));
+                    return next;
+                });
+                setWorkoutLog(prev => {
+                    const next = new Set(prev);
+                    cloudWorkoutLog.forEach(k => next.add(k));
+                    return next;
+                });
+                setClosedDays(prev => {
+                    const next = new Set(prev);
+                    cloudClosedDays.forEach(k => next.add(k));
+                    return next;
+                });
+                setMealSelections(prev => ({ ...prev, ...cloudSelections }));
+            }
+        };
+
+        fetchCloudData();
+    }, [userId]);
+
+    // 2. Debounced Save to Cloud for SINGLE DAY changes
+    useEffect(() => {
+        if (!userId) return;
+
+        const syncForDate = async (dateKey: string) => {
+            const consumedList: string[] = [];
+            consumedMeals.forEach(k => {
+                if (k.startsWith(dateKey)) {
+                    const parts = k.split('_');
+                    if (parts.length > 1) consumedList.push(parts[1]);
+                }
+            });
+
+            const isWorkoutDone = workoutLog.has(dateKey);
+            const isClosed = closedDays.has(dateKey);
+
+            const daySelections: Record<string, number> = {};
+            Object.entries(mealSelections).forEach(([k, v]) => {
+                if (k.startsWith(dateKey)) {
+                    const parts = k.split('_');
+                    if (parts.length > 1) daySelections[parts[1]] = v as number;
+                }
+            });
+
+            const dayExtraCals = extraCalories[dateKey] || 0;
+
+            const payload = {
+                user_id: userId,
+                date: dateKey,
+                consumed_meals: consumedList,
+                workout_completed: isWorkoutDone,
+                closed_day: isClosed,
+                extra_calories: dayExtraCals,
+                meal_selections: daySelections,
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('user_daily_tracking')
+                .upsert(payload, { onConflict: 'user_id, date' });
+
+            if (error) console.error("Sync Error for " + dateKey + ":", error);
+        };
+
+        const timer = setTimeout(() => {
+            syncForDate(selectedDateKey);
+            if (selectedDateKey !== todayKey) {
+                syncForDate(todayKey);
+            }
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, [consumedMeals, workoutLog, closedDays, mealSelections, selectedDateKey, userId]);
 
     // --- ACTIONS ---
 
@@ -971,7 +1116,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
             const newMealLog = [];
             analysis.foods.forEach(food => {
                 newMealLog.push({
-                    id: `analyzed - ${Date.now()} -${Math.random()} `,
+                    id: `analyzed-${Date.now()}-${Math.random()}`,
                     name: food.name,
                     calories: food.calories,
                     protein: food.protein,
@@ -1019,7 +1164,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     };
 
     const toggleMealConsumption = (mealId: string, dateKey: string) => {
-        const key = `${dateKey}_${mealId} `;
+        const key = `${dateKey}_${mealId}`;
         const newConsumed = new Set(consumedMeals);
         if (newConsumed.has(key)) newConsumed.delete(key);
         else newConsumed.add(key);
@@ -1089,14 +1234,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         });
     };
 
+    const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
     const filteredExercises = useMemo(() => {
         let list = exerciseDatabase;
         if (selectedMuscleGroup !== 'Todos') {
             list = list.filter(ex => ex.group === selectedMuscleGroup);
         }
         if (exerciseSearchTerm) {
-            const lower = exerciseSearchTerm.toLowerCase();
-            list = list.filter(ex => ex.name.toLowerCase().includes(lower));
+            const lower = removeAccents(exerciseSearchTerm.toLowerCase());
+            list = list.filter(ex => removeAccents(ex.name.toLowerCase()).includes(lower));
         }
         return list;
     }, [exerciseSearchTerm, selectedMuscleGroup]);
@@ -1108,7 +1255,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         let total = 0;
 
         (plan.nutrition?.meals || []).forEach(meal => {
-            const isConsumed = consumedMeals.has(`${dateKey}_${meal.id} `);
+            const isConsumed = consumedMeals.has(`${dateKey}_${meal.id}`);
 
             if (onlyConsumed && !isConsumed) {
                 return;
@@ -1131,7 +1278,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         const dayLog = dietHistory[dateKey] || {};
 
         (plan.nutrition?.meals || []).forEach(meal => {
-            if (consumedMeals.has(`${dateKey}_${meal.id} `)) {
+            if (consumedMeals.has(`${dateKey}_${meal.id}`)) {
                 const logged = dayLog[meal.id];
 
                 if (logged && logged.length > 0) {
@@ -1142,7 +1289,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     });
                 } else {
                     // Check selected option
-                    const optionIndex = mealSelections[`${dateKey}_${meal.id} `] || 0;
+                    const optionIndex = mealSelections[`${dateKey}_${meal.id}`] || 0;
 
                     if (optionIndex === 0) {
                         consumed.protein += meal.macros?.protein || 0;
@@ -1207,7 +1354,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
             // If isToday check for "start of day"
             let effectiveBMR = bmr;
-            if (dKey === todayKey) {
+            const isDayClosed = closedDays.has(dKey);
+
+            if (dKey === todayKey && !isDayClosed) {
                 // Check if ALL meals are marked
                 // We count how many meals in 'consumedMeals' match the current dateKey
                 const mealsConsumedCount = Array.from(consumedMeals).filter((k: unknown) => (k as string).startsWith(dKey)).length;
@@ -1272,7 +1421,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     // --- ACTIONS ---
 
     const toggleExercise = (dayName: string, exerciseName: string) => {
-        const key = `${dayName} -${exerciseName} `;
+        const key = `${dayName}-${exerciseName}`;
         const newSet = new Set(completedExercises);
         if (newSet.has(key)) newSet.delete(key);
         else newSet.add(key);
@@ -1280,7 +1429,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     };
 
     const handleSelectOption = (mealId: string, optionIndex: number) => {
-        const key = `${selectedDateKey}_${mealId} `;
+        const key = `${selectedDateKey}_${mealId}`;
         setMealSelections(prev => ({
             ...prev,
             [key]: optionIndex
@@ -1330,7 +1479,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
             });
 
             if (cameraTargetMealId) {
-                const key = `${todayKey}_${cameraTargetMealId} `;
+                const key = `${todayKey}_${cameraTargetMealId}`;
                 const newConsumed = new Set(consumedMeals);
                 newConsumed.add(key);
                 setConsumedMeals(newConsumed);
@@ -1343,23 +1492,119 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         }
     };
 
+    const handleOpenEditFood = (mealId: string, index: number, food: FoodItem) => {
+        setEditingFoodData({ mealId, index, food });
+
+        // Parse portion logic
+        const portionStr = food.portion || '';
+
+        // Try to finding grams in parentheses first, e.g. "1 concha (100g)"
+        const parenMatch = portionStr.match(/\((\d+)\s*g\)/i);
+        // Otherwise look for leading number
+        const leadingMatch = portionStr.match(/^(\d+)\s*(.*)$/);
+
+        let pValue = '';
+        let pUnit = '';
+
+        if (parenMatch) {
+            pValue = parenMatch[1];
+            pUnit = 'g';
+        } else if (leadingMatch) {
+            pValue = leadingMatch[1];
+            pUnit = leadingMatch[2].trim();
+        }
+
+        const pValueNum = parseFloat(pValue) || 0;
+
+        const initialValues = {
+            name: food.name,
+            calories: String(food.calories),
+            protein: String(food.protein || 0),
+            carbs: String(food.carbs || 0),
+            fats: String(food.fats || 0),
+            portionValue: pValue,
+            portionUnit: pUnit || 'g'
+        };
+
+        setEditFoodForm(initialValues);
+        setBaseEditValues({
+            calories: food.calories,
+            protein: food.protein || 0,
+            carbs: food.carbs || 0,
+            fats: food.fats || 0,
+            portionValue: pValueNum
+        });
+        setIsEditFoodModalOpen(true);
+    };
+
+    // Auto-scale calories and macros when portion value changes in Edit Modal
+    useEffect(() => {
+        if (!isEditFoodModalOpen || !baseEditValues.portionValue) return;
+
+        const currentValue = parseFloat(editFoodForm.portionValue);
+        if (isNaN(currentValue) || currentValue <= 0) return;
+
+        const ratio = currentValue / baseEditValues.portionValue;
+
+        setEditFoodForm(prev => ({
+            ...prev,
+            calories: String(Math.round(baseEditValues.calories * ratio)),
+            protein: String(Number((baseEditValues.protein * ratio).toFixed(1))),
+            carbs: String(Number((baseEditValues.carbs * ratio).toFixed(1))),
+            fats: String(Number((baseEditValues.fats * ratio).toFixed(1)))
+        }));
+    }, [editFoodForm.portionValue, isEditFoodModalOpen, baseEditValues]);
+
+    const handleConfirmEditFood = () => {
+        if (!editingFoodData || !editFoodForm.name) return;
+
+        // Combine value and unit
+        const combinedPortion = `${editFoodForm.portionValue}${editFoodForm.portionUnit}`;
+
+        const updatedFood: FoodItem = {
+            ...editingFoodData.food,
+            name: editFoodForm.name,
+            calories: Number(editFoodForm.calories),
+            protein: Number(editFoodForm.protein) || 0,
+            carbs: Number(editFoodForm.carbs) || 0,
+            fats: Number(editFoodForm.fats) || 0,
+            portion: combinedPortion
+        };
+
+        setDietHistory(prev => {
+            const dayLog = prev[selectedDateKey] || {};
+            const mealLog = [...(dayLog[editingFoodData.mealId] || [])];
+            mealLog[editingFoodData.index] = updatedFood;
+            return {
+                ...prev,
+                [selectedDateKey]: { ...dayLog, [editingFoodData.mealId]: mealLog }
+            };
+        });
+
+        setIsEditFoodModalOpen(false);
+        setEditingFoodData(null);
+    };
+
     const handleAddManualFood = () => {
         if (!newManualFood.name || !newManualFood.calories) return;
 
+        // Combine value and unit
+        const combinedPortion = `${newManualFood.portionValue}${newManualFood.portionUnit}`;
+
         const food: FoodItem = {
-            id: `manual - ${Date.now()} `,
+            id: `manual-${Date.now()}`,
             name: newManualFood.name,
             calories: Number(newManualFood.calories),
             protein: Number(newManualFood.protein) || 0,
             carbs: Number(newManualFood.carbs) || 0,
             fats: Number(newManualFood.fats) || 0,
-            portion: newManualFood.portion || '1 porção',
+            portion: combinedPortion,
             category: 'meal'
         };
 
         handleAddFood(food);
         // Reset form
-        setNewManualFood({ name: '', calories: '', protein: '', carbs: '', fats: '', portion: '1 porção' });
+        setNewManualFood({ name: '', calories: '', protein: '', carbs: '', fats: '', portionValue: '1', portionUnit: 'unidade' });
     };
 
     const handleRemoveFood = (mealId: string, index: number) => {
@@ -1462,7 +1707,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                     if (resultText) {
                         const data = JSON.parse(resultText);
                         const food: FoodItem = {
-                            id: `scanned - ${Date.now()} `,
+                            id: `scanned-${Date.now()}`,
                             name: data.name,
                             calories: data.calories,
                             protein: data.protein,
@@ -1547,7 +1792,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
         const newOption: MealOption = {
-            id: `custom - ${Date.now()} `,
+            id: `custom-${Date.now()}`,
             name: newOptionName,
             description: "Opção personalizada criada por você.",
             ingredients: currentItems.map(item => ({
@@ -1599,7 +1844,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     };
 
     const handleToggleIngredient = (mealId: string, ingredientIndex: number) => {
-        const key = `${selectedDateKey}_${mealId} `;
+        const key = `${selectedDateKey}_${mealId}`;
         setExcludedIngredients(prev => {
             const currentList = prev[key] || [];
             if (currentList.includes(ingredientIndex)) {
@@ -1709,7 +1954,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
 
     const filteredFoods = useMemo(() => {
         if (!foodSearchTerm) return foodDatabase;
-        return foodDatabase.filter(f => f.name.toLowerCase().includes(foodSearchTerm.toLowerCase()));
+        const lower = removeAccents(foodSearchTerm.toLowerCase());
+        return foodDatabase.filter(f => removeAccents(f.name.toLowerCase()).includes(lower));
     }, [foodSearchTerm]);
 
     // --- SHOPPING LIST CALCULATOR & PARSER ---
@@ -1729,7 +1975,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
             const peopleCount = savedInfo.householdSize;
 
             plan.nutrition.meals.forEach(meal => {
-                const selectionKey = `${dKey}_${meal.id} `;
+                const selectionKey = `${dKey}_${meal.id}`;
 
                 // LOGICA DE SELEÇÃO PADRÃO BASEADA NO DIA
                 let selectedIdx = mealSelections[selectionKey];
@@ -2668,7 +2914,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             </h3>
                             <div className="space-y-2">
                                 {(plan.nutrition?.meals || []).map(meal => {
-                                    const key = `${selectedDateKey}_${meal.id} `;
+                                    const key = `${selectedDateKey}_${meal.id}`;
                                     const isDone = consumedMeals.has(key);
                                     return (
                                         <button
@@ -2746,6 +2992,47 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 </button>
                             </div>
                         )}
+
+                        {/* END DAY BUTTON - Manual Deficit Lock */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+                                <Lock className="w-4 h-4 text-indigo-500" />
+                                Encerrar o Dia
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    const newClosed = new Set(closedDays);
+                                    if (newClosed.has(selectedDateKey)) {
+                                        newClosed.delete(selectedDateKey);
+                                    } else {
+                                        const confirmText = "Tem certeza que deseja encerrar o dia?\n\nIsso confirmará que você NÃO comerá mais nada hoje, e o déficit será calculado com o que foi registrado até agora.";
+                                        if (confirm(confirmText)) {
+                                            newClosed.add(selectedDateKey);
+                                        } else {
+                                            return;
+                                        }
+                                    }
+                                    setClosedDays(newClosed);
+                                }}
+                                className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${closedDays.has(selectedDateKey)
+                                    ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                    : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95'
+                                    }`}
+                            >
+                                {closedDays.has(selectedDateKey) ? (
+                                    <>
+                                        <Unlock className="w-4 h-4" /> Reabrir Dia (Registrar mais)
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" /> Confirmar Encerramento (Dormir)
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-[10px] text-center text-gray-400 mt-2 px-2 leading-tight">
+                                Use isso se você fez jejum ou não vai realizar todas as refeições. O déficit será calculado com o que está marcado.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div >
@@ -3033,7 +3320,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                         </div>
                     )}
                     {(plan.nutrition?.meals || []).map(meal => {
-                        const selectionKey = `${selectedDateKey}_${meal.id} `;
+                        const selectionKey = `${selectedDateKey}_${meal.id}`;
 
                         // --- AUTO ROTATION LOGIC ---
                         let selectedOptionIndex = mealSelections[selectionKey];
@@ -3063,19 +3350,19 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                const key = `${selectedDateKey}_${meal.id} `;
+                                                const key = `${selectedDateKey}_${meal.id}`;
                                                 const isDone = consumedMeals.has(key);
                                                 const newConsumed = new Set(consumedMeals);
                                                 if (isDone) newConsumed.delete(key);
                                                 else newConsumed.add(key);
                                                 setConsumedMeals(newConsumed);
                                             }}
-                                            className={`w - 8 h - 8 rounded - lg border - 2 flex items - center justify - center transition - all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent hover:border-brand-300'} `}
+                                            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200 text-transparent hover:border-brand-300'}`}
                                         >
                                             <Check className="w-5 h-5" />
                                         </button>
                                         <div>
-                                            <h4 className={`font - bold transition - all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'text-green-700 line-through opacity-70' : 'text-gray-900'} `}>{meal.name}</h4>
+                                            <h4 className={`font-bold transition-all ${consumedMeals.has(`${selectedDateKey}_${meal.id}`) ? 'text-green-700 line-through opacity-70' : 'text-gray-900'}`}>{meal.name}</h4>
                                             <span className="text-xs text-gray-500 font-medium">{meal.time} • {getComputedMealCalories(meal, selectedDateKey)} kcal</span>
                                         </div>
                                     </div>
@@ -3103,7 +3390,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                         {/* Ingredients List */}
                                         <div className="space-y-2 mb-4">
                                             {displayItems.map((item, idx) => {
-                                                const isExcluded = (excludedIngredients[`${selectedDateKey}_${meal.id} `] || []).includes(idx) && !customItems;
+                                                const isExcluded = (excludedIngredients[`${selectedDateKey}_${meal.id}`] || []).includes(idx) && !customItems;
 
                                                 return (
                                                     <div
@@ -3117,9 +3404,22 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                             <span className="font-bold">{(item as FoodItem).portion || (item as any).amount}</span> {(item as FoodItem).name || (item as any).name}
                                                         </span>
                                                         {hasCustomItems && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleRemoveFood(meal.id, idx); }} className="text-red-400 hover:text-red-600 p-1">
-                                                                <X className="w-4 h-4" />
-                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleOpenEditFood(meal.id, idx, item as FoodItem); }}
+                                                                    className="text-brand-400 hover:text-brand-600 p-1"
+                                                                    title="Editar alimento"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleRemoveFood(meal.id, idx); }}
+                                                                    className="text-red-400 hover:text-red-600 p-1"
+                                                                    title="Remover alimento"
+                                                                >
+                                                                    <X className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 )
@@ -3176,8 +3476,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
     };
 
     const renderShopping = () => {
-        const activeItems = calculatedShoppingList.filter(i => !checkedItems.has(`${i.name}__${i.unit} `));
-        const completedItemsList = calculatedShoppingList.filter(i => checkedItems.has(`${i.name}__${i.unit} `));
+        const activeItems = calculatedShoppingList.filter(i => !checkedItems.has(`${i.name}__${i.unit}`));
+        const completedItemsList = calculatedShoppingList.filter(i => checkedItems.has(`${i.name}__${i.unit}`));
 
         // REMOVIDO: O bloco "if (calculatedShoppingList.length === 0)" que retornava cedo demais.
         // Agora renderizamos o Header Card primeiro e depois verificamos se a lista está vazia.
@@ -3249,7 +3549,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                             </div>
 
                             {activeItems.map((item, idx) => {
-                                const key = `${item.name}__${item.unit} `;
+                                const key = `${item.name}__${item.unit}`;
                                 return (
                                     <div key={key} className={`flex items - center p - 4 border - b border - gray - 100 last: border - 0 hover: bg - gray - 50 transition - colors`}>
                                         <button
@@ -3283,7 +3583,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 {showCompletedItems && (
                                     <div className="bg-gray-50/50">
                                         {completedItemsList.map((item) => {
-                                            const key = `${item.name}__${item.unit} `;
+                                            const key = `${item.name}__${item.unit}`;
                                             return (
                                                 <div key={key} className="flex items-center p-4 border-t border-gray-100 opacity-60">
                                                     <button
@@ -3843,10 +4143,10 @@ text - gray - 700
                                 <button
                                     key={m.id}
                                     onClick={() => setCurrentMealIdForAdd(m.id)}
-                                    className={`px - 3 py - 1 rounded - full text - xs font - bold whitespace - nowrap transition - all ${currentMealIdForAdd === m.id
+                                    className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${currentMealIdForAdd === m.id
                                         ? 'bg-brand-600 text-white shadow-sm'
                                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                        } `}
+                                        }`}
                                 >
                                     {m.name}
                                 </button>
@@ -3855,15 +4155,13 @@ text - gray - 700
                         <div className="flex p-1 bg-gray-100 rounded-lg mx-4 mb-2">
                             <button
                                 onClick={() => setFoodModalMode('library')}
-                                className={`flex - 1 py - 1.5 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${foodModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    } `}
+                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
                             >
                                 <Search className="w-3.5 h-3.5" /> Buscar
                             </button>
                             <button
                                 onClick={() => setFoodModalMode('manual')}
-                                className={`flex - 1 py - 1.5 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${foodModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    } `}
+                                className={`flex-1 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${foodModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
                             >
                                 <Edit3 className="w-3.5 h-3.5" /> Manual
                             </button>
@@ -3929,13 +4227,30 @@ text - gray - 700
                                     </div>
                                     <div className="flex-1">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Porção</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: 1 unidade"
-                                            value={newManualFood.portion}
-                                            onChange={(e) => setNewManualFood({ ...newManualFood, portion: e.target.value })}
-                                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                placeholder="1"
+                                                value={newManualFood.portionValue}
+                                                onChange={(e) => setNewManualFood({ ...newManualFood, portionValue: e.target.value })}
+                                                className="w-24 p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-bold"
+                                            />
+                                            <div className="flex-1 relative">
+                                                <select
+                                                    value={newManualFood.portionUnit}
+                                                    onChange={(e) => setNewManualFood({ ...newManualFood, portionUnit: e.target.value })}
+                                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-brand-500 outline-none appearance-none font-bold text-gray-700"
+                                                >
+                                                    <option value="g">gramas (g)</option>
+                                                    <option value="unidade">unidade</option>
+                                                    <option value="ml">ml</option>
+                                                    <option value="fatia">fatia</option>
+                                                    <option value="colher">colher</option>
+                                                    <option value="xícara">xícara</option>
+                                                </select>
+                                                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3981,6 +4296,108 @@ text - gray - 700
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT FOOD MODAL */}
+            {isEditFoodModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg">Editar Alimento</h3>
+                            <button onClick={() => setIsEditFoodModalOpen(false)} className="p-2 bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nome do Alimento</label>
+                                <input
+                                    type="text"
+                                    value={editFoodForm.name}
+                                    onChange={(e) => setEditFoodForm({ ...editFoodForm, name: e.target.value })}
+                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none font-bold text-gray-700"
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Calorias (kcal)</label>
+                                    <input
+                                        type="number"
+                                        value={editFoodForm.calories}
+                                        onChange={(e) => setEditFoodForm({ ...editFoodForm, calories: e.target.value })}
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Porção / Medida</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            value={editFoodForm.portionValue}
+                                            onChange={(e) => setEditFoodForm({ ...editFoodForm, portionValue: e.target.value })}
+                                            className="w-24 p-3 border border-gray-200 rounded-xl focus:ring-brand-500 outline-none text-gray-700 font-bold"
+                                        />
+                                        <div className="flex-1 relative">
+                                            <select
+                                                value={editFoodForm.portionUnit}
+                                                onChange={(e) => setEditFoodForm({ ...editFoodForm, portionUnit: e.target.value })}
+                                                className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-brand-500 outline-none appearance-none font-bold text-gray-700"
+                                            >
+                                                <option value="g">gramas (g)</option>
+                                                <option value="unidade">unidade</option>
+                                                <option value="ml">ml</option>
+                                                <option value="fatia">fatia</option>
+                                                <option value="colher">colher</option>
+                                                <option value="xícara">xícara</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Macronutrientes</p>
+                                <div className="flex gap-3">
+                                    <div className="flex-1 text-center">
+                                        <label className="block text-[10px] font-bold text-indigo-600 mb-1">Prot(g)</label>
+                                        <input
+                                            type="number"
+                                            value={editFoodForm.protein}
+                                            onChange={(e) => setEditFoodForm({ ...editFoodForm, protein: e.target.value })}
+                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex-1 text-center">
+                                        <label className="block text-[10px] font-bold text-amber-600 mb-1">Carb(g)</label>
+                                        <input
+                                            type="number"
+                                            value={editFoodForm.carbs}
+                                            onChange={(e) => setEditFoodForm({ ...editFoodForm, carbs: e.target.value })}
+                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex-1 text-center">
+                                        <label className="block text-[10px] font-bold text-rose-600 mb-1">Gord(g)</label>
+                                        <input
+                                            type="number"
+                                            value={editFoodForm.fats}
+                                            onChange={(e) => setEditFoodForm({ ...editFoodForm, fats: e.target.value })}
+                                            className="w-full p-2 text-center rounded-lg border border-gray-200 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleConfirmEditFood}
+                                className="w-full py-3 bg-brand-600 font-bold rounded-xl text-white shadow-lg shadow-brand-200 hover:bg-brand-700 transition-colors"
+                            >
+                                Salvar Alterações
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -4098,19 +4515,16 @@ text - gray - 700
                             <button onClick={() => setExerciseModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                         </div>
 
-                        {/* Tabs */}
                         <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
                             <button
                                 onClick={() => setExerciseModalMode('library')}
-                                className={`flex - 1 py - 2 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${exerciseModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    } `}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'library' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
                             >
                                 <BookOpen className="w-4 h-4" /> Biblioteca
                             </button>
                             <button
                                 onClick={() => setExerciseModalMode('manual')}
-                                className={`flex - 1 py - 2 rounded - md text - sm font - bold flex items - center justify - center gap - 2 transition - all ${exerciseModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'
-                                    } `}
+                                className={`flex-1 py-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${exerciseModalMode === 'manual' ? 'bg-white shadow text-brand-600' : 'text-gray-500'}`}
                             >
                                 <Edit3 className="w-4 h-4" /> Manual
                             </button>
@@ -4135,10 +4549,10 @@ text - gray - 700
                                             <button
                                                 key={group}
                                                 onClick={() => setSelectedMuscleGroup(group)}
-                                                className={`px - 3 py - 1 rounded - full text - xs font - bold whitespace - nowrap transition - colors ${selectedMuscleGroup === group
+                                                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedMuscleGroup === group
                                                     ? 'bg-brand-100 text-brand-700 border border-brand-200'
                                                     : 'bg-gray-50 text-gray-500 border border-gray-200'
-                                                    } `}
+                                                    }`}
                                             >
                                                 {group}
                                             </button>
