@@ -2826,32 +2826,53 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 ) : (
                                     <div className="space-y-3">
                                         {displayExercises.map((ex, i) => {
-                                            const key = `${session.dayName} -${ex.name} `;
+                                            const key = `${session.dayName}-${ex.name}`;
                                             const isDone = completedExercises.has(key);
                                             return (
-                                                <div key={i} className="flex gap-3 items-start group">
+                                                <div key={i} className="flex gap-3 items-start group py-2 border-b border-gray-50 last:border-0">
                                                     <button
                                                         onClick={() => toggleExercise(session.dayName, ex.name)}
-                                                        className={`mt - 1 flex - shrink - 0 w - 6 h - 6 rounded border - 2 flex items - center justify - center transition - colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-brand-400'
-                                                            } `}
+                                                        className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-brand-400'
+                                                            }`}
                                                     >
-                                                        {isDone && <Check className="w-4 h-4 text-white" />}
+                                                        {isDone && <Check className="w-3.5 h-3.5 text-white" />}
                                                     </button>
-                                                    <div className={`flex - 1 ${isDone ? 'opacity-50' : ''} `}>
-                                                        <div className="flex justify-between items-start">
-                                                            <p className={`font - bold text - sm ${isDone ? 'line-through text-gray-400' : 'text-gray-800'} `}>{ex.name}</p>
-                                                            <button
-                                                                onClick={(e) => handleRemoveExercise(session.dayName, i, e)}
-                                                                className="text-gray-300 hover:text-red-500 p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                                                title="Remover exercício"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
+                                                    <div className={`flex-1 ${isDone ? 'opacity-50' : ''}`}>
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <p className={`font-bold text-sm leading-tight ${isDone ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                                    {ex.name}
+                                                                </p>
+                                                                <button
+                                                                    onClick={(e) => handleRemoveExercise(session.dayName, i, e)}
+                                                                    className="text-gray-300 hover:text-red-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-0.5"
+                                                                    title="Remover exercício"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 font-medium">
+                                                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">
+                                                                    <span className="font-bold text-gray-800">{ex.sets}</span> séries
+                                                                </span>
+                                                                <span className="text-gray-300 pl-1">x</span>
+                                                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded text-gray-600">
+                                                                    <span className="font-bold text-gray-800">{ex.reps}</span> reps
+                                                                </span>
+                                                                {ex.rest && (
+                                                                    <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                                                        ⏳ {ex.rest}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {ex.notes && (
+                                                                <p className="text-[11px] text-amber-700 bg-amber-50/50 p-1.5 rounded-lg border border-amber-100 mt-1 flex items-start gap-1.5 leading-snug">
+                                                                    <span className="mt-0.5">💡</span> {ex.notes}
+                                                                </p>
+                                                            )}
                                                         </div>
-                                                        <p className="text-xs text-gray-500">
-                                                            {ex.sets}x {ex.reps} {ex.rest && `| ⏳ ${ex.rest} `}
-                                                        </p>
-                                                        {ex.notes && <p className="text-xs text-amber-600 mt-0.5">💡 {ex.notes}</p>}
                                                     </div>
                                                 </div>
                                             );
