@@ -3099,7 +3099,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* UNDO BUTTON */}
             {backupPlan && (
-                <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800 p-3 rounded-xl flex items-center justify-between shadow-sm transition-colors">
+                <div className="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 p-3 rounded-xl flex items-center justify-between shadow-sm transition-colors">
                     <div className="flex items-center gap-2">
                         <RefreshCw className="w-4 h-4 text-brand-600 dark:text-brand-400 animate-spin-slow" />
                         <span className="text-xs font-bold text-brand-800 dark:text-brand-300">Você está usando um plano importado</span>
@@ -3203,7 +3203,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                                                                     <span className="font-bold text-gray-800 dark:text-white">{ex.reps}</span> reps
                                                                 </span>
                                                                 {ex.rest && (
-                                                                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded">
+                                                                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded">
                                                                         ⏳ {ex.rest}
                                                                     </span>
                                                                 )}
@@ -3313,7 +3313,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 <div className="flex justify-end gap-2 px-1">
                     <button
                         onClick={() => setIsFoodPreferencesModalOpen(true)}
-                        className="bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-orange-200 dark:hover:bg-orange-900/40 transition-colors shadow-sm"
+                        className="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-orange-200 dark:hover:bg-orange-900/40 transition-colors shadow-sm"
                     >
                         <Carrot className="w-3.5 h-3.5" /> Personalizar Paladar
                     </button>
@@ -3326,7 +3326,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 </div>
 
                 {/* Daily Summary */}
-                <div className="bg-brand-50 dark:bg-brand-950/20 rounded-xl p-4 border border-brand-100 dark:border-brand-900/50 transition-colors">
+                <div className="bg-brand-50 dark:bg-brand-900/40 rounded-xl p-4 border border-brand-100 dark:border-brand-900/50 transition-colors">
                     <div className="flex justify-between items-center mb-2">
                         <h3 className="font-bold text-brand-900 dark:text-brand-300">Meta Diária</h3>
                         <span className="text-xs font-bold bg-white dark:bg-gray-800 text-brand-700 dark:text-brand-400 px-2 py-1 rounded shadow-sm">
@@ -3517,7 +3517,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
                     <button
                         onClick={handleAddMeal}
-                        className="w-full py-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
+                        className="w-full py-6 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all flex flex-col items-center justify-center gap-2 font-bold group"
                     >
                         <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-full group-hover:bg-brand-100 dark:group-hover:bg-brand-900/40 transition-colors">
                             <PlusCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
