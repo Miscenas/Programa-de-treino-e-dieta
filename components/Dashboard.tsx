@@ -275,6 +275,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
     const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
     const [isDeficitBreakdownOpen, setIsDeficitBreakdownOpen] = useState(false);
+    const [showCelebrationMessage, setShowCelebrationMessage] = useState(false);
 
     // Nutrition Goals Selection (Target calories/macros)
     const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false);
@@ -1445,6 +1446,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
                 confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
             }, 250);
+
+            // Show written message
+            setShowCelebrationMessage(true);
+            setTimeout(() => setShowCelebrationMessage(false), 5000);
         }
     };
 
@@ -4971,6 +4976,21 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         >
                             Salvar Ajuste
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* CELEBRATION MESSAGE OVERLAY */}
+            {showCelebrationMessage && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-4 animate-in fade-in duration-300">
+                    <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-2 border-brand-500 rounded-3xl p-8 shadow-[0_20px_50px_rgba(34,197,94,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in zoom-in-50 duration-500 flex flex-col items-center text-center max-w-xs">
+                        <div className="bg-brand-100 dark:bg-brand-900/40 p-4 rounded-full mb-4 ring-8 ring-brand-50 dark:ring-brand-900/20">
+                            <Flame className="w-12 h-12 text-brand-600 dark:text-brand-400 animate-bounce" />
+                        </div>
+                        <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tighter">META BATIDA!</h2>
+                        <p className="text-gray-600 dark:text-gray-400 font-bold text-lg leading-tight">Seu déficit do dia foi garantido com sucesso. 🚀</p>
+                        <div className="h-1 w-12 bg-brand-500 rounded-full mt-4"></div>
+                        <p className="text-[10px] text-brand-600 dark:text-brand-400 font-black uppercase tracking-widest mt-4">Foco no objetivo!</p>
                     </div>
                 </div>
             )}
