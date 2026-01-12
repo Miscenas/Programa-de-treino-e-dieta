@@ -1515,66 +1515,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* WEIGHT CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <Scale className="w-5 h-5 text-brand-500" /> Peso Corporal
-                            </h3>
-                            {weightChartData.length > 0 && (
-                                <span className="text-2xl font-black text-brand-600">
-                                    {weightChartData[weightChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">kg</span>
-                                </span>
-                            )}
-                        </div>
-                        <div className="h-48">
-                            <PremiumLineChart data={weightChartData.slice(-10)} color="#6366f1" yLabel="kg" />
-                        </div>
-                    </div>
-
-                    {/* BODY FAT CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-rose-500" /> Gordura Corporal
-                            </h3>
-                            {fatChartData.length > 0 && (
-                                <span className="text-2xl font-black text-rose-600">
-                                    {fatChartData[fatChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">%</span>
-                                </span>
-                            )}
-                        </div>
-                        <div className="h-48">
-                            <PremiumLineChart data={fatChartData.slice(-10)} color="#f43f5e" yLabel="%" />
-                        </div>
-                    </div>
-
-                    {/* WAIST CHART */}
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                                <ScanLine className="w-5 h-5 text-emerald-500" /> Medida Abdominal
-                            </h3>
-                            {waistChartData.length > 0 && (
-                                <span className="text-2xl font-black text-emerald-600">
-                                    {waistChartData[waistChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">cm</span>
-                                </span>
-                            )}
-                        </div>
-                        <div className="h-48">
-                            <PremiumLineChart data={waistChartData.slice(-10)} color="#10b981" yLabel="cm" />
-                        </div>
-                    </div>
-                </div>
-
                 {/* GOOGLE FIT ACTIVITY CHARTS */}
                 {googleFitData.length > 0 && (
-                    <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         <div className="col-span-full">
                             <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
                                 <Activity className="w-6 h-6 text-green-600" />
-                                Atividade Física (Google Fit)
+                                Atividade Física (Google Fit) - Últimos 30 Dias
                             </h2>
                         </div>
 
@@ -1673,8 +1620,69 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                 </div>
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
+
+                <div className="pt-6">
+                    <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                        <Scale className="w-6 h-6 text-brand-600" />
+                        Medidas e Composição Corporal
+                    </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* WEIGHT CHART */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                <Scale className="w-5 h-5 text-brand-500" /> Peso Corporal
+                            </h3>
+                            {weightChartData.length > 0 && (
+                                <span className="text-2xl font-black text-brand-600">
+                                    {weightChartData[weightChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">kg</span>
+                                </span>
+                            )}
+                        </div>
+                        <div className="h-48">
+                            <PremiumLineChart data={weightChartData.slice(-10)} color="#6366f1" yLabel="kg" />
+                        </div>
+                    </div>
+
+                    {/* BODY FAT CHART */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-rose-500" /> Gordura Corporal
+                            </h3>
+                            {fatChartData.length > 0 && (
+                                <span className="text-2xl font-black text-rose-600">
+                                    {fatChartData[fatChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">%</span>
+                                </span>
+                            )}
+                        </div>
+                        <div className="h-48">
+                            <PremiumLineChart data={fatChartData.slice(-10)} color="#f43f5e" yLabel="%" />
+                        </div>
+                    </div>
+
+                    {/* WAIST CHART */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                                <ScanLine className="w-5 h-5 text-emerald-500" /> Medida Abdominal
+                            </h3>
+                            {waistChartData.length > 0 && (
+                                <span className="text-2xl font-black text-emerald-600">
+                                    {waistChartData[waistChartData.length - 1].value}<span className="text-xs font-bold text-gray-400 ml-1">cm</span>
+                                </span>
+                            )}
+                        </div>
+                        <div className="h-48">
+                            <PremiumLineChart data={waistChartData.slice(-10)} color="#10b981" yLabel="cm" />
+                        </div>
+                    </div>
+                </div>
+
 
                 {/* MEASUREMENT MODAL */}
                 {isMeasurementModalOpen && (
