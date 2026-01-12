@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot } from 'lucide-react';
 import { FoodPreferencesModal } from './FoodPreferencesModal';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory, generatePlan } from '../services/expertSystem';
@@ -371,6 +371,38 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
+    // Extra Calories State
+    const [extraCalories, setExtraCalories] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('fitcoach_extra_calories');
+        return saved ? JSON.parse(saved) : {};
+    });
+    const [isExtraCaloriesModalOpen, setExtraCaloriesModalOpen] = useState(false);
+    const [newExtraCalories, setNewExtraCalories] = useState('');
+    const [editingExtraDate, setEditingExtraDate] = useState<string | null>(null);
+
+    // Persist extra calories
+    useEffect(() => {
+        localStorage.setItem('fitcoach_extra_calories', JSON.stringify(extraCalories));
+    }, [extraCalories]);
+
+    const handleOpenExtraCaloriesModal = (dateKey: string, currentVal: number) => {
+        setEditingExtraDate(dateKey);
+        setNewExtraCalories(currentVal.toString());
+        setExtraCaloriesModalOpen(true);
+    };
+
+    const handleSaveExtraCalories = () => {
+        if (editingExtraDate) {
+            const val = parseInt(newExtraCalories) || 0;
+            setExtraCalories(prev => ({
+                ...prev,
+                [editingExtraDate]: val
+            }));
+            setExtraCaloriesModalOpen(false);
+            setEditingExtraDate(null);
+        }
+    };
+
     const todayKey = getDateKey(new Date());
     const selectedDateKey = getDateKey(selectedDate);
 
@@ -1158,6 +1190,49 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
         const today = new Date();
         const todayKey = getDateKey(today);
 
+        // Helper to calculate daily balance with overrides
+        const calculateDailyBalance = (dKey: string, isTodayOnly: boolean = false) => {
+            const fitData = getGoogleFitDataForDate(dKey);
+            const consumed = getCaloriesForDate(dKey, true);
+            const manualExtra = extraCalories[dKey];
+
+            let activeBurn = 0;
+            const fitCals = fitData.calories_burned || 0;
+
+            if (manualExtra !== undefined) {
+                activeBurn = manualExtra;
+            } else if (fitCals > 0) {
+                activeBurn = Math.max(0, fitCals - bmr);
+            }
+
+            // If isToday check for "start of day"
+            let effectiveBMR = bmr;
+            if (dKey === todayKey) {
+                // Check if ALL meals are marked
+                // We count how many meals in 'consumedMeals' match the current dateKey
+                const mealsConsumedCount = Array.from(consumedMeals).filter((k: unknown) => (k as string).startsWith(dKey)).length;
+                // Assuming plan has meals, fallback to 4 if structure undefined
+                const totalMealsForDay = (plan as any).meals?.length || 4;
+
+                // User Requirement: "só altere o valor quando marcado as 4 refeições"
+                // If distinct consumed count < total, return 0 Deficit (Graph stays at Start).
+                if (mealsConsumedCount < totalMealsForDay) {
+                    return 0;
+                }
+
+                // Once ALL meals are marked, use Full BMR.
+                effectiveBMR = bmr;
+            }
+
+            // If we have manual extra or fit data, use (EffectiveBMR + Active). 
+            const totalBurned = effectiveBMR + activeBurn;
+            const balance = totalBurned - consumed;
+
+            // We only credit positive balance towards "weight loss progress" usually, 
+            // but consistent with previous logic:
+            return Math.max(0, balance);
+        };
+
         if (deficitStartDate) {
             // Forward Cycle: Sum TMB/Activity only for valid passed days
             const [y, m, d] = deficitStartDate.split('-').map(Number);
@@ -1171,18 +1246,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 // Only count up to today (inclusive)
                 if (dKey > todayKey) continue;
 
-                const fitData = getGoogleFitDataForDate(dKey);
-                const consumed = getCaloriesForDate(dKey, true);
-
-                const totalFit = fitData.calories_burned || 0;
-                // Use Fit data if available, otherwise just BMR
-                const burned = totalFit > 0 ? totalFit : bmr;
-
-                // If it's today, totalFit might be active calories + BMR partial?
-                // Google Fit usually returns Total.
-                // Logic: Accumulate ONLY positive deficit (progress).
-                // If surplus (negative), it counts as 0 (no progress), pointer stops.
-                totalBalance += Math.max(0, burned - consumed);
+                totalBalance += calculateDailyBalance(dKey);
             }
         } else {
             // Standard: Last 7 days
@@ -1190,13 +1254,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 const date = new Date(today);
                 date.setDate(today.getDate() - i);
                 const dKey = getDateKey(date);
-                const fitData = getGoogleFitDataForDate(dKey);
-                const consumed = getCaloriesForDate(dKey, true);
 
-                const totalFit = fitData.calories_burned || 0;
-                const extra = totalFit > bmr ? totalFit - bmr : 0;
-
-                totalBalance += Math.max(0, (bmr + extra) - consumed);
+                totalBalance += calculateDailyBalance(dKey);
             }
         }
 
@@ -2215,8 +2274,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 } else {
                     const fitData = getGoogleFitDataForDate(dKey);
                     const consumed = getCaloriesForDate(dKey, true);
+                    const manualExtra = extraCalories[dKey];
                     const totalFit = fitData.calories_burned || 0;
-                    const extra = totalFit > bmr ? totalFit - bmr : 0;
+
+                    let extra = 0;
+                    if (manualExtra !== undefined) {
+                        extra = manualExtra;
+                    } else if (totalFit > 0) {
+                        extra = Math.max(0, totalFit - bmr);
+                    }
+
                     const balance = (bmr + extra) - consumed;
                     days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
                 }
@@ -2227,10 +2294,19 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                 const date = new Date(today);
                 date.setDate(today.getDate() - i);
                 const dKey = getDateKey(date);
+
                 const fitData = getGoogleFitDataForDate(dKey);
                 const consumed = getCaloriesForDate(dKey, true);
+                const manualExtra = extraCalories[dKey];
                 const totalFit = fitData.calories_burned || 0;
-                const extra = totalFit > bmr ? totalFit - bmr : 0;
+
+                let extra = 0;
+                if (manualExtra !== undefined) {
+                    extra = manualExtra;
+                } else if (totalFit > 0) {
+                    extra = Math.max(0, totalFit - bmr);
+                }
+
                 const balance = (bmr + extra) - consumed;
                 days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
             }
@@ -2281,10 +2357,16 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                                 <p className="text-[8px] font-bold text-gray-400 uppercase">TMB</p>
                                                 <p className="text-xs font-bold text-gray-700">{day.bmr}</p>
                                             </div>
-                                            <div className="text-center">
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase">Atividade</p>
-                                                <p className="text-xs font-bold text-gray-700">+{day.extra}</p>
-                                            </div>
+                                            <button
+                                                onClick={() => handleOpenExtraCaloriesModal(day.dKey, day.extra)}
+                                                className="text-center hover:bg-gray-100 rounded-lg transition-colors py-1 -my-1"
+                                            >
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <p className="text-[8px] font-bold text-gray-400 uppercase">Atividade</p>
+                                                    <Edit2 className="w-2 h-2 text-gray-300" />
+                                                </div>
+                                                <p className="text-xs font-bold text-brand-600">+{day.extra}</p>
+                                            </button>
                                             <div className="text-center border-l border-gray-200">
                                                 <p className="text-[8px] font-bold text-gray-400 uppercase">Consumo</p>
                                                 <p className="text-xs font-black text-orange-600">-{day.consumed}</p>
@@ -2362,7 +2444,12 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atividade</p>
-                                            <p className="text-sm font-black text-gray-800">{activeCalories}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
+                                            <p className="text-sm font-black text-gray-800">
+                                                {activeCalories}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span>
+                                                {googleFitTotal > 0 && googleFitTotal < bmr && (
+                                                    <span className="block text-[9px] text-gray-400 font-medium">Fit Total: {googleFitTotal}</span>
+                                                )}
+                                            </p>
                                         </div>
                                     </div>
 
@@ -2436,10 +2523,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, onReset, onUpda
                                 className="cursor-pointer transition-transform hover:scale-[1.02]"
                             >
                                 <ModernGauge
-                                    value={Math.max(0, weeklyDeficit)}
+                                    value={Math.max(0, 7700 - Math.max(0, weeklyDeficit))}
                                     max={7700}
                                     type="deficit"
-                                    label={deficitStartDate ? "Déficit Acumulado" : "Déficit Semanal"}
+                                    label="Falta para 1kg"
                                     suffix="kcal"
                                     icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
                                 />
@@ -3678,31 +3765,32 @@ text - gray - 700
             </div>
 
             {/* BOTTOM NAV */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe pt-2 px-4 flex justify-between items-center z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                {[
-                    { id: 'overview', icon: LayoutDashboard, label: 'Resumo' },
-                    { id: 'workout', icon: Dumbbell, label: 'Treino' },
-                    { id: 'diet', icon: Apple, label: 'Dieta' },
-                    { id: 'progress', icon: TrendingUp, label: 'Evolução' },
-                    { id: 'calendar', icon: CalendarRange, label: 'Agenda' },
-                    { id: 'shopping', icon: ShoppingBasket, label: 'Lista' },
-                ].map(tab => {
-                    const isActive = activeTab === tab.id;
-                    const Icon = tab.icon;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex flex - col items - center gap - 1 p - 2 transition - all duration - 300 ${isActive ? 'text-brand-600 -translate-y-2' : 'text-gray-400'
-                                } `}
-                        >
-                            <div className={`p - 2 rounded - xl transition - all ${isActive ? 'bg-brand-50 shadow-brand-100 shadow-md' : 'bg-transparent'} `}>
-                                <Icon className={`w - 5 h - 5 ${isActive ? 'fill-current' : ''} `} />
-                            </div>
-                            <span className={`text - [9px] font - bold ${isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'} `}>{tab.label}</span>
-                        </button>
-                    )
-                })}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div className="w-full max-w-md mx-auto px-6 pb-6 pt-3 flex justify-between items-center">
+                    {[
+                        { id: 'overview', icon: LayoutDashboard, label: 'Resumo' },
+                        { id: 'workout', icon: Dumbbell, label: 'Treino' },
+                        { id: 'diet', icon: Apple, label: 'Dieta' },
+                        { id: 'progress', icon: TrendingUp, label: 'Evolução' },
+                        { id: 'calendar', icon: CalendarRange, label: 'Agenda' },
+                        { id: 'shopping', icon: ShoppingBasket, label: 'Lista' },
+                    ].map(tab => {
+                        const isActive = activeTab === tab.id;
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`flex flex-col items-center gap-1 transition-all duration-300 ${isActive ? 'text-brand-600 -translate-y-1' : 'text-gray-400'}`}
+                            >
+                                <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-brand-50' : 'bg-transparent'}`}>
+                                    <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} />
+                                </div>
+                                <span className={`text-[9px] font-bold ${isActive ? 'opacity-100' : 'opacity-0 h-0 w-0 overflow-hidden'}`}>{tab.label}</span>
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* MODALS */}
@@ -4359,6 +4447,42 @@ text - gray - 700
 
             {renderSmartImportModal()}
             {renderDeficitBreakdownModal()}
+
+            {/* EXTRA CALORIES MODAL */}
+            {isExtraCaloriesModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-black text-gray-800">Calorias Extras</h3>
+                                <p className="text-xs text-gray-400 font-bold uppercase">Ajuste Manual</p>
+                            </div>
+                            <button onClick={() => setExtraCaloriesModalOpen(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Calorias Ativas (Relógio/Treino)</label>
+                            <input
+                                type="number"
+                                value={newExtraCalories}
+                                onChange={(e) => setNewExtraCalories(e.target.value)}
+                                className="w-full text-4xl font-black text-center text-brand-600 bg-brand-50 border border-brand-100 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                                autoFocus
+                            />
+                            <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">Isso será somado ao seu metabolismo basal.</p>
+                        </div>
+
+                        <button
+                            onClick={handleSaveExtraCalories}
+                            className="w-full py-4 bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-100 active:scale-[0.98] transition-all"
+                        >
+                            Salvar Ajuste
+                        </button>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

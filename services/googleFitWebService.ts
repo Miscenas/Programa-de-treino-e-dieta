@@ -79,8 +79,12 @@ export class GoogleFitWebService {
 
     try {
       const endTime = new Date();
+      // Ensure we capture the full current day by setting end time to future or now
+      // Actually, setting to NOW is enough, but aligning start to midnight is key.
+
       const startTime = new Date();
-      startTime.setDate(endTime.getDate() - days);
+      startTime.setDate(startTime.getDate() - days);
+      startTime.setHours(0, 0, 0, 0); // Align to midnight
 
       // Obter passos diários
       const stepsResponse = await fetch(
@@ -156,8 +160,11 @@ export class GoogleFitWebService {
       .filter((bucket: any) => bucket.dataset && bucket.dataset[0] && bucket.dataset[0].point && bucket.dataset[0].point.length > 0)
       .map((bucket: any) => {
         const point = bucket.dataset[0].point[0];
+        // Use local date string YYYY-MM-DD
+        const d = new Date(parseInt(bucket.startTimeMillis));
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         return {
-          date: new Date(parseInt(bucket.startTimeMillis)).toISOString().split('T')[0],
+          date: dateStr,
           steps: point.value[0].intVal || 0
         };
       });
@@ -173,8 +180,11 @@ export class GoogleFitWebService {
       .filter((bucket: any) => bucket.dataset && bucket.dataset[0] && bucket.dataset[0].point && bucket.dataset[0].point.length > 0)
       .map((bucket: any) => {
         const point = bucket.dataset[0].point[0];
+        // Use local date string YYYY-MM-DD
+        const d = new Date(parseInt(bucket.startTimeMillis));
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         return {
-          date: new Date(parseInt(bucket.startTimeMillis)).toISOString().split('T')[0],
+          date: dateStr,
           calories: Math.round(point.value[0].fpVal || 0)
         };
       });
