@@ -3328,8 +3328,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 {/* Daily Summary */}
                 <div className="bg-brand-50 dark:bg-brand-900/40 rounded-xl p-4 border border-brand-100 dark:border-brand-900/50 transition-colors">
                     <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold text-brand-900 dark:text-brand-300">Meta Diária</h3>
-                        <span className="text-xs font-bold bg-white dark:bg-gray-800 text-brand-700 dark:text-brand-400 px-2 py-1 rounded shadow-sm">
+                        <h3 className="font-bold text-brand-900 dark:text-white">Meta Diária</h3>
+                        <span className="text-xs font-bold bg-white dark:bg-gray-800 text-brand-700 dark:text-white px-2 py-1 rounded shadow-sm">
                             {selectedDayPlannedCalories} / {plan.nutrition?.targetCalories || 2000} kcal
                         </span>
                     </div>
