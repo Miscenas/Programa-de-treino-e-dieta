@@ -1340,10 +1340,37 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         const todayKey = getDateKey(today);
 
         // Helper to calculate daily balance with overrides
-        const calculateDailyBalance = (dKey: string, isTodayOnly: boolean = false) => {
+        const calculateDailyBalance = (dKey: string) => {
+            const isDayClosed = closedDays.has(dKey);
+            const planMeals = plan.nutrition?.meals || [];
+
+            // If the plan has no meals, we can't judge completion except via "Close Day"
+            if (planMeals.length === 0 && !isDayClosed) {
+                return 0;
+            }
+
+            let effectiveBMR = 0;
+            const currentMealIds = new Set(planMeals.map(m => m.id));
+            const consumedThisDay = Array.from(consumedMeals).filter((k: any) => {
+                const key = String(k);
+                if (!key.startsWith(dKey)) return false;
+                const mealId = key.split('_')[1];
+                return currentMealIds.has(mealId);
+            });
+
+            // Strict check: day must be explicitly closed OR all current plan meals must be marked consumed
+            const isAllMealsMarked = planMeals.length > 0 && consumedThisDay.length >= planMeals.length;
+
+            if (isDayClosed || isAllMealsMarked) {
+                effectiveBMR = bmr;
+            } else {
+                // User Requirement: Skip calculation if day is not finished/closed
+                return 0;
+            }
+
             const fitData = getGoogleFitDataForDate(dKey);
-            const consumed = getCaloriesForDate(dKey, true);
             const manualExtra = extraCalories[dKey];
+            const consumedCals = getCaloriesForDate(dKey, true);
 
             let activeBurn = 0;
             const fitCals = fitData.calories_burned || 0;
@@ -1354,33 +1381,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 activeBurn = Math.max(0, fitCals - bmr);
             }
 
-            // If isToday check for "start of day"
-            let effectiveBMR = bmr;
-            const isDayClosed = closedDays.has(dKey);
-
-            if (dKey === todayKey && !isDayClosed) {
-                // Check if ALL meals are marked
-                // We count how many meals in 'consumedMeals' match the current dateKey
-                const mealsConsumedCount = Array.from(consumedMeals).filter((k: unknown) => (k as string).startsWith(dKey)).length;
-                // Assuming plan has meals, fallback to 4 if structure undefined
-                const totalMealsForDay = (plan as any).meals?.length || 4;
-
-                // User Requirement: "só altere o valor quando marcado as 4 refeições"
-                // If distinct consumed count < total, return 0 Deficit (Graph stays at Start).
-                if (mealsConsumedCount < totalMealsForDay) {
-                    return 0;
-                }
-
-                // Once ALL meals are marked, use Full BMR.
-                effectiveBMR = bmr;
-            }
-
-            // If we have manual extra or fit data, use (EffectiveBMR + Active). 
             const totalBurned = effectiveBMR + activeBurn;
-            const balance = totalBurned - consumed;
+            const balance = totalBurned - consumedCals;
 
-            // We only credit positive balance towards "weight loss progress" usually, 
-            // but consistent with previous logic:
+            // Consistency check: only positive balance contributes to the weight loss "stored deficit"
             return Math.max(0, balance);
         };
 
