@@ -250,6 +250,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         calories_burned: number;
     }>>([]);
     const [loadingGoogleFitData, setLoadingGoogleFitData] = useState(false);
+    const [selectedProgressData, setSelectedProgressData] = useState<any>(null);
 
     // Caloric Deficit Goal State
     const [deficitGoal, setDeficitGoal] = useState<number>(() => {
@@ -2262,112 +2263,140 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 </div>
 
                 {/* GOOGLE FIT ACTIVITY CHARTS */}
-                {googleFitData.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                        <div className="col-span-full">
-                            <h2 className="text-xl font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                                <Activity className="w-6 h-6 text-green-600 dark:text-green-400" />
-                                Atividade Física (Google Fit) - Últimos 30 Dias
-                            </h2>
-                        </div>
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Evolução Google Fit</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Acompanhe seus passos e queima calórica.</p>
 
-                        {/* STEPS CHART */}
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                    <Activity className="w-5 h-5 text-green-500 dark:text-green-400" /> Passos Diários
+                    {googleFitData.length > 0 ? (
+                        <div className="space-y-8">
+                            {/* Steps Chart */}
+                            <div>
+                                <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                                    <Footprints className="w-5 h-5 text-green-500" />
+                                    Passos Diários
                                 </h3>
-                                {(() => {
-                                    const totalSteps = googleFitData.reduce((sum, d) => sum + d.steps, 0);
-                                    const avgSteps = Math.round(totalSteps / googleFitData.length);
-                                    return (
-                                        <div className="text-right">
-                                            <div className="text-2xl font-black text-green-600 dark:text-green-400">
-                                                {avgSteps.toLocaleString()}
-                                            </div>
-                                            <div className="text-xs font-bold text-gray-400 dark:text-gray-500">média/dia</div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                            <div className="h-48">
-                                <PremiumLineChart
-                                    data={googleFitData.map(d => ({
-                                        label: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                                        value: d.steps
-                                    }))}
-                                    color="#10b981"
-                                    yLabel=""
-                                />
-                            </div>
-                            <div className="mt-4 grid grid-cols-3 gap-3">
-                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
-                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Total</div>
-                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
-                                        {googleFitData.reduce((sum, d) => sum + d.steps, 0).toLocaleString()}
-                                    </div>
-                                </div>
-                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
-                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Melhor Dia</div>
-                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
-                                        {Math.max(...googleFitData.map(d => d.steps)).toLocaleString()}
-                                    </div>
-                                </div>
-                                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-xl text-center border border-transparent dark:border-green-900/50">
-                                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase mb-1">Meta 10k</div>
-                                    <div className="text-lg font-black text-green-900 dark:text-green-200">
-                                        {googleFitData.filter(d => d.steps >= 10000).length}/{googleFitData.length}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                                <div className="h-64 flex gap-2 overflow-x-auto pb-2">
+                                    {googleFitData.map((data, index) => {
+                                        const maxSteps = Math.max(...googleFitData.map(d => d.steps), 10000); // Baseline 10k
+                                        const date = new Date(data.date + 'T12:00:00');
+                                        const dayLabel = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                        const height = (data.steps / maxSteps) * 100;
 
-                        {/* CALORIES BURNED CHART */}
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                                    <Flame className="w-5 h-5 text-orange-500 dark:text-orange-400" /> Calorias Queimadas
-                                </h3>
-                                {(() => {
-                                    const totalCalories = googleFitData.reduce((sum, d) => sum + d.calories_burned, 0);
-                                    const avgCalories = Math.round(totalCalories / googleFitData.length);
-                                    return (
-                                        <div className="text-right">
-                                            <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
-                                                {avgCalories}
+                                        return (
+                                            <div key={index} className="h-full flex-1 min-w-[40px] flex flex-col items-center gap-1 group cursor-pointer" onClick={() => setSelectedProgressData(data)}>
+                                                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-t-lg relative flex-1 flex items-end overflow-hidden group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
+                                                    <div
+                                                        className="w-full bg-green-500 dark:bg-green-600 rounded-t-lg transition-all duration-500"
+                                                        style={{ height: `${height}%` }}
+                                                    ></div>
+                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                                                        {data.steps.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-400 rotate-0 truncate w-full text-center">{dayLabel}</span>
                                             </div>
-                                            <div className="text-xs font-bold text-gray-400 dark:text-gray-500">média/dia</div>
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                            <div className="h-48">
-                                <PremiumLineChart
-                                    data={googleFitData.map(d => ({
-                                        label: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                                        value: d.calories_burned
-                                    }))}
-                                    color="#f97316"
-                                    yLabel=" kcal"
-                                />
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-xl text-center border border-transparent dark:border-orange-900/50">
-                                    <div className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase mb-1">Total</div>
-                                    <div className="text-lg font-black text-orange-900 dark:text-orange-200">
-                                        {googleFitData.reduce((sum, d) => sum + d.calories_burned, 0).toLocaleString()} kcal
-                                    </div>
-                                </div>
-                                <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-xl text-center border border-transparent dark:border-orange-900/50">
-                                    <div className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase mb-1">Melhor Dia</div>
-                                    <div className="text-lg font-black text-orange-900 dark:text-orange-200">
-                                        {Math.max(...googleFitData.map(d => d.calories_burned))} kcal
-                                    </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
+
+                            {/* Calories Chart */}
+                            <div>
+                                <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                                    <Flame className="w-5 h-5 text-orange-500" />
+                                    Calorias Queimadas (Ativas)
+                                </h3>
+                                <div className="h-64 flex gap-2 overflow-x-auto pb-2">
+                                    {googleFitData.map((data, index) => {
+                                        const maxCals = Math.max(...googleFitData.map(d => d.calories_burned), 500);
+                                        const date = new Date(data.date + 'T12:00:00');
+                                        const dayLabel = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                        const height = (data.calories_burned / maxCals) * 100;
+
+                                        return (
+                                            <div key={index} className="h-full flex-1 min-w-[40px] flex flex-col items-center gap-1 group cursor-pointer" onClick={() => setSelectedProgressData(data)}>
+                                                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-t-lg relative flex-1 flex items-end overflow-hidden group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors">
+                                                    <div
+                                                        className="w-full bg-orange-500 dark:bg-orange-600 rounded-t-lg transition-all duration-500"
+                                                        style={{ height: `${height}%` }}
+                                                    ></div>
+                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                                                        {data.calories_burned.toLocaleString()} kcal
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-gray-400 rotate-0 truncate w-full text-center">{dayLabel}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Details Table */}
+                            {selectedProgressData && (
+                                <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-4 duration-300" id="progress-details">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-gray-900 dark:text-white">Detalhamento do Dia</h3>
+                                        <button onClick={() => setSelectedProgressData(null)} className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1">
+                                            <X className="w-3 h-3" /> Fechar
+                                        </button>
+                                    </div>
+                                    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 font-bold uppercase text-xs">
+                                                <tr>
+                                                    <th className="px-4 py-3">Data</th>
+                                                    <th className="px-4 py-3 text-right">Passos</th>
+                                                    <th className="px-4 py-3 text-right">Calorias (Ativas)</th>
+                                                    <th className="px-4 py-3 text-center">Meta Passos</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                                {[selectedProgressData].map((data, idx) => {
+                                                    const date = new Date(data.date + 'T12:00:00');
+                                                    return (
+                                                        <tr key={idx} className="bg-brand-50 dark:bg-brand-900/10 transition-colors">
+                                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                                                                {date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono text-gray-600 dark:text-gray-300">
+                                                                {data.steps.toLocaleString()}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-mono text-gray-600 dark:text-gray-300">
+                                                                {data.calories_burned.toLocaleString()} kcal
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                {data.steps >= 10000 ? (
+                                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">Atingida</span>
+                                                                ) : (
+                                                                    <span className="text-gray-400 text-[10px] font-bold">{Math.round((data.steps / 10000) * 100)}%</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+                                <Activity className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="font-bold text-gray-900 dark:text-white">Sem dados do Google Fit</h3>
+                            <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2 mb-6">Conecte sua conta ou aguarde a sincronização para ver seus gráficos de evolução.</p>
+                            <button
+                                onClick={handleGoogleFitImport}
+                                className="px-6 py-2 bg-brand-600 text-white rounded-lg font-bold text-sm shadow-md hover:bg-brand-700 transition-colors"
+                            >
+                                Sincronizar Agora
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 <div className="pt-6">
                     <h2 className="text-xl font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
@@ -4100,6 +4129,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
             </div>
         );
     };
+
+
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col font-sans text-gray-900 dark:text-gray-100 transition-colors duration-300">
