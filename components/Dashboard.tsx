@@ -52,7 +52,7 @@ interface FruitAnalysis {
 const ModernGauge: React.FC<{
     value: number;
     max: number;
-    type: 'calories' | 'workouts';
+    type: 'calories' | 'workouts' | 'deficit';
     label: string;
     suffix?: string;
     icon: React.ReactNode
@@ -74,7 +74,9 @@ const ModernGauge: React.FC<{
     const gradientId = `grad-${type}`;
     const colors = type === 'calories'
         ? { start: '#f97316', end: '#dc2626', bg: '#fee2e2' }
-        : { start: '#4ade80', end: '#16a34a', bg: '#dcfce7' };
+        : type === 'deficit'
+            ? { start: '#3b82f6', end: '#1d4ed8', bg: '#dbeafe' }
+            : { start: '#4ade80', end: '#16a34a', bg: '#dcfce7' };
 
     const renderTicks = () => {
         const ticks = [];
@@ -239,6 +241,13 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         calories_burned: number;
     }>>([]);
     const [loadingGoogleFitData, setLoadingGoogleFitData] = useState(false);
+
+    // Caloric Deficit Goal State
+    const [deficitGoal, setDeficitGoal] = useState<number>(() => {
+        const saved = localStorage.getItem('fitcoach_deficit_goal');
+        return saved ? parseInt(saved) : 500; // Default 500 kcal
+    });
+    const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
 
 
     // Modals State
@@ -515,6 +524,11 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
             fetchGoogleFitData();
         }
     }, []);
+
+    // Save deficit goal to localStorage
+    useEffect(() => {
+        localStorage.setItem('fitcoach_deficit_goal', deficitGoal.toString());
+    }, [deficitGoal]);
 
 
     // --- ACTIONS ---
@@ -1873,15 +1887,33 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                             icon={<Flame className="w-5 h-5 text-orange-500" />}
                         />
 
-                        {/* GAUGE TREINOS */}
-                        <ModernGauge
-                            value={weeklyWorkoutsDone}
-                            max={weeklyFrequencyTarget}
-                            type="workouts"
-                            label="Treinos (Semana)"
-                            suffix="dias"
-                            icon={<Dumbbell className="w-5 h-5 text-green-500" />}
-                        />
+                        {/* GAUGE DÉFICIT CALÓRICO */}
+                        {(() => {
+                            const todayData = getGoogleFitDataForDate(todayKey);
+                            const bmr = calculateBMR();
+                            const totalExpended = bmr + todayData.calories_burned;
+                            const actualDeficit = totalExpended - todayConsumedCalories;
+
+                            return (
+                                <div className="relative">
+                                    <ModernGauge
+                                        value={actualDeficit}
+                                        max={deficitGoal}
+                                        type="deficit"
+                                        label="Déficit (Hoje)"
+                                        suffix="kcal"
+                                        icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
+                                    />
+                                    <button
+                                        onClick={() => setIsDeficitModalOpen(true)}
+                                        className="absolute top-2 right-2 bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors"
+                                        title="Editar meta de déficit"
+                                    >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -3730,6 +3762,68 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     mealName={selectedMealForCamera.name}
                     onFoodAnalyzed={handleMealAnalysis}
                 />
+            )}
+
+            {/* DEFICIT GOAL MODAL */}
+            {isDeficitModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <h3 className="font-bold text-xl mb-2 text-gray-800 flex items-center gap-2">
+                            <TrendingUp className="w-6 h-6 text-blue-600" />
+                            Meta de Déficit Calórico
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                            Defina quantas calorias você quer queimar a mais do que consome por dia.
+                        </p>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-gray-700 mb-3">Déficit Diário (kcal)</label>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setDeficitGoal(Math.max(100, deficitGoal - 50))}
+                                    className="w-12 h-12 rounded-full border-2 border-blue-200 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                                >
+                                    <span className="text-2xl font-bold text-blue-600">-</span>
+                                </button>
+                                <div className="flex-1 text-center">
+                                    <div className="text-4xl font-black text-blue-600">{deficitGoal}</div>
+                                    <div className="text-xs text-gray-500 font-semibold">kcal/dia</div>
+                                </div>
+                                <button
+                                    onClick={() => setDeficitGoal(Math.min(1000, deficitGoal + 50))}
+                                    className="w-12 h-12 rounded-full border-2 border-blue-200 flex items-center justify-center hover:bg-blue-50 active:scale-95 transition-all"
+                                >
+                                    <span className="text-2xl font-bold text-blue-600">+</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50 p-4 rounded-xl mb-6">
+                            <div className="text-xs font-semibold text-blue-700 uppercase mb-2">Estimativa de Perda</div>
+                            <div className="text-sm text-blue-900">
+                                <strong>{(deficitGoal * 7 / 7700).toFixed(2)} kg/semana</strong>
+                                <div className="text-xs text-blue-600 mt-1">
+                                    (baseado em déficit de {deficitGoal} kcal/dia)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsDeficitModalOpen(false)}
+                                className="flex-1 py-3 bg-gray-100 font-bold rounded-xl text-gray-600 hover:bg-gray-200 transition-colors"
+                            >
+                                Fechar
+                            </button>
+                            <button
+                                onClick={() => setIsDeficitModalOpen(false)}
+                                className="flex-1 py-3 bg-blue-600 font-bold rounded-xl text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
+                            >
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {renderSmartImportModal()}
