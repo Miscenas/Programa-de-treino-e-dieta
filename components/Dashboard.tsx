@@ -3345,7 +3345,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                     ) : (
                         <button
                             onClick={handleOpenPlanDayModal}
-                            className="w-full py-2 bg-brand-600 dark:bg-brand-500 text-white shadow-md shadow-brand-200 dark:shadow-brand-900/40 rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                            className="w-full py-2 bg-brand-600 dark:bg-brand-600 text-white shadow-md shadow-brand-200 dark:shadow-brand-900/40 rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-brand-700 dark:hover:bg-brand-700"
                         >
                             <ShoppingBasket className="w-4 h-4" />
                             Adicionar à Lista de Compras
