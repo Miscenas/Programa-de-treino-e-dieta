@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity } from 'lucide-react';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
@@ -8,6 +8,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { NutritionDashboard } from './NutritionDashboard';
 import { MealCameraModal } from './MealCameraModal';
 import { EdgeFunctionService } from '../services/edgeFunctionService';
+import { GoogleFitWebService } from '../services/googleFitWebService';
+import { supabase } from '../services/supabaseClient';
 
 interface Props {
     plan: FullPlan;
@@ -227,6 +229,8 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
     const [newMeasurement, setNewMeasurement] = useState({ weight: '', bodyFat: '', waist: '' });
 
+    // Google Fit Import State
+    const [importingGoogleFit, setImportingGoogleFit] = useState(false);
 
 
     // Modals State
@@ -541,6 +545,55 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
     const openMealCamera = (mealId: string, mealName: string) => {
         setSelectedMealForCamera({ id: mealId, name: mealName });
         setCameraModalOpen(true);
+    };
+
+    // --- GOOGLE FIT INTEGRATION ---
+
+    const handleGoogleFitImport = async () => {
+        setImportingGoogleFit(true);
+
+        try {
+            // Connect to Google Fit
+            await GoogleFitWebService.connect();
+
+            // Import data from last 30 days
+            const data = await GoogleFitWebService.importData(30);
+
+            // Get current user ID from auth
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const userId = authUser?.id || 'demo-user';
+
+            // Save to Supabase
+            for (let i = 0; i < data.steps.length; i++) {
+                const stepData = data.steps[i];
+                const calorieData = data.calories.find(c => c.date === stepData.date);
+
+                // Use upsert to handle duplicates
+                const { error } = await supabase.from('smartwatch_data').upsert({
+                    user_id: userId,
+                    date: stepData.date,
+                    steps: stepData.steps,
+                    calories_burned: calorieData?.calories || 0,
+                    source: 'google_fit_import',
+                    created_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,date'
+                });
+
+                if (error) {
+                    console.error('Error saving smartwatch data:', error);
+                }
+            }
+
+            alert(`✅ Dados do Google Fit importados com sucesso!\n\n📊 ${data.steps.length} dias de dados salvos.`);
+            console.log('Google Fit data imported successfully:', data);
+
+        } catch (error) {
+            console.error('Erro ao importar Google Fit:', error);
+            alert('❌ Falha ao importar dados do Google Fit.\n\nVerifique se você configurou o REACT_APP_GOOGLE_CLIENT_ID nas variáveis de ambiente.');
+        } finally {
+            setImportingGoogleFit(false);
+        }
     };
 
 
@@ -1536,6 +1589,36 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                         </button>
                     </div>
                 )}
+
+                {/* GOOGLE FIT IMPORT BUTTON */}
+                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                            <Activity className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-white font-bold text-sm">Sincronizar Google Fit</h3>
+                            <p className="text-blue-100 text-[10px]">Importe seus dados de atividade física</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleGoogleFitImport}
+                        disabled={importingGoogleFit}
+                        className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                        {importingGoogleFit ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Importando...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Activity className="w-4 h-4" />
+                                <span>Importar</span>
+                            </>
+                        )}
+                    </button>
+                </div>
 
                 {/* HEADER GAUGES */}
                 <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
