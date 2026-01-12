@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone } from 'lucide-react';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
@@ -327,6 +327,235 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         return mondayBasedIndex % options.length;
     };
 
+    const handleSmartImport = async (content: string, type: 'image' | 'text') => {
+        setImportStatus('loading');
+        setImportError(null);
+        try {
+            const imported = await EdgeFunctionService.parsePlan(content, type, importDistributeByDays);
+
+            // Auto toggle based on what was found
+            const hasMeals = (imported.nutrition?.meals?.length || 0) > 0;
+            const hasWorkout = (imported.workout?.weeklySchedule?.length || 0) > 0;
+
+            setImportDietSelected(hasMeals);
+            setImportWorkoutSelected(hasWorkout);
+
+            setImportedPlan(imported);
+            setImportStatus('review');
+        } catch (error: any) {
+            setImportError(error.message || 'Erro ao processar plano');
+            setImportStatus('idle');
+        }
+    };
+
+    const cleanDayNamesFromImportedPlan = () => {
+        if (!importedPlan) return;
+
+        const daysToStrip = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
+        const stripPattern = new RegExp(`^(${daysToStrip.join('|')})(-feira)?(:)?\\s*`, 'i');
+
+        const newPlan = { ...importedPlan };
+        if (newPlan.nutrition?.meals) {
+            newPlan.nutrition.meals = newPlan.nutrition.meals.map(meal => ({
+                ...meal,
+                options: (meal.options || []).map(opt => ({
+                    ...opt,
+                    name: opt.name.replace(stripPattern, '').trim() || opt.name
+                }))
+            }));
+        }
+        setImportedPlan(newPlan);
+    };
+
+    const confirmSmartImport = async () => {
+        if (importedPlan) {
+            // Backup current plan and selections
+            const currentMealCount = plan.nutrition?.meals?.length || 0;
+            if (currentMealCount >= 3) {
+                setBackupPlan(plan);
+                setBackupSelections(mealSelections);
+                localStorage.setItem('fitcoach_backup_plan', JSON.stringify(plan));
+                localStorage.setItem('fitcoach_backup_selections', JSON.stringify(mealSelections));
+            }
+
+            // SMART MERGE: Build the final plan based on selections
+            const finalPlan = { ...plan };
+
+            if (importDietSelected && importedPlan.nutrition) {
+                finalPlan.nutrition = importedPlan.nutrition;
+            }
+
+            if (importWorkoutSelected && importedPlan.workout) {
+                finalPlan.workout = importedPlan.workout;
+            }
+
+            // Apply merged plan
+            onUpdatePlan(finalPlan);
+
+            // Handle meal selections only if diet was imported
+            if (importDietSelected && finalPlan.nutrition?.meals) {
+                const newSelections = { ...mealSelections };
+                const today = new Date();
+
+                for (let i = 0; i < 7; i++) {
+                    const futureDate = new Date(today);
+                    futureDate.setDate(today.getDate() + i);
+                    const dKey = getDateKey(futureDate);
+
+                    finalPlan.nutrition.meals.forEach(meal => {
+                        const sKey = `${dKey}_${meal.id}`;
+                        const opts = getMealOptions(meal);
+                        if (opts.length > 0) {
+                            newSelections[sKey] = getOptionIndexForDate(opts, dKey);
+                        }
+                    });
+                }
+                setMealSelections(newSelections);
+                localStorage.setItem('fitcoach_selections', JSON.stringify(newSelections));
+            }
+
+            setIsSmartImportModalOpen(false);
+            setImportedPlan(null);
+            setImportStatus('idle');
+        }
+    };
+
+    const undoImport = () => {
+        if (backupPlan) {
+            onUpdatePlan(backupPlan);
+            if (Object.keys(backupSelections).length > 0) {
+                setMealSelections(backupSelections);
+                localStorage.setItem('fitcoach_selections', JSON.stringify(backupSelections));
+            }
+            setBackupPlan(null);
+            setBackupSelections({});
+            localStorage.removeItem('fitcoach_backup_plan');
+            localStorage.removeItem('fitcoach_backup_selections');
+        }
+    };
+
+    const handleRepairPlan = async () => {
+        if (confirm("Seu plano parece incompleto. Deseja tentar restaurar o plano original da IA?")) {
+            setImportStatus('loading');
+            try {
+                const repairedPlan = await EdgeFunctionService.generatePlan(user);
+                onUpdatePlan(repairedPlan);
+                alert("Plano restaurado com sucesso!");
+            } catch (error) {
+                alert("Erro ao restaurar: " + (error as any).message);
+            } finally {
+                setImportStatus('idle');
+            }
+        }
+    };
+
+    const handleAddMeal = () => {
+        const mealName = prompt("Qual o nome da nova refeição? (Ex: Lanche da Tarde)");
+        if (!mealName) return;
+
+        const newMeal: Meal = {
+            id: `meal-${Date.now()}`,
+            name: mealName,
+            time: "16:00",
+            calories: 0,
+            macros: { protein: 0, carbs: 0, fats: 0 },
+            options: [
+                {
+                    id: `opt-${Date.now()}`,
+                    name: "Opção Padrão",
+                    description: "Clique em 'Adicionar Alimento' para montar esta refeição",
+                    ingredients: [],
+                    calories: 0,
+                    macros: { protein: 0, carbs: 0, fats: 0 }
+                }
+            ]
+        };
+
+        const newPlan = { ...plan };
+        if (!newPlan.nutrition) {
+            newPlan.nutrition = {
+                bmr: 0,
+                tdee: 0,
+                targetCalories: 2000,
+                waterIntake: 2000,
+                meals: []
+            };
+        }
+        newPlan.nutrition.meals = [...(newPlan.nutrition.meals || []), newMeal];
+        onUpdatePlan(newPlan);
+        setExpandedMeal(newMeal.id);
+    };
+
+    const handleGoogleFitImport = async () => {
+        if (importingGoogleFit) return;
+
+        setImportingGoogleFit(true);
+        try {
+            // 1. Conectar via Google Identity Services
+            await GoogleFitWebService.connect();
+
+            // 2. Importar dados dos últimos 7 dias
+            const data = await GoogleFitWebService.importData(7);
+
+            // 3. Mesclar dados de passos e calorias por data
+            const merged: any[] = [];
+            const allDates = Array.from(new Set([
+                ...data.steps.map((s: any) => s.date),
+                ...data.calories.map((c: any) => c.date)
+            ]));
+
+            allDates.forEach(date => {
+                const s = data.steps.find((item: any) => item.date === date);
+                const c = data.calories.find((item: any) => item.date === date);
+                merged.push({
+                    date,
+                    steps: s?.steps || 0,
+                    calories_burned: c?.calories || 0
+                });
+            });
+
+            // 4. Atualizar estado e cache
+            setGoogleFitData(merged);
+            localStorage.setItem('google_fit_cache', JSON.stringify(merged));
+
+            alert("Google Fit sincronizado!");
+        } catch (error: any) {
+            console.error("Erro no Google Fit:", error);
+            alert("Não foi possível sincronizar com o Google Fit. Verifique se as janelas pop-up estão permitidas.");
+        } finally {
+            setImportingGoogleFit(false);
+        }
+    };
+
+    const fetchGoogleFitData = async () => {
+        const cache = localStorage.getItem('google_fit_cache');
+        if (cache) {
+            try {
+                setGoogleFitData(JSON.parse(cache));
+            } catch (e) {
+                console.error("Erro ao carregar cache do Google Fit:", e);
+            }
+        }
+    };
+
+    const calculateBMR = (): number => {
+        if (!user || !user.weight || !user.height || !user.age) return 2000;
+        const weight = user.weight;
+        const height = user.height;
+        const age = user.age;
+
+        if (user.gender === 'male' || user.gender === 'masculino') {
+            return Math.round(88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age));
+        } else {
+            return Math.round(447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age));
+        }
+    };
+
+    const getGoogleFitDataForDate = (dateKey: string) => {
+        const data = googleFitData.find(d => d.date === dateKey);
+        return data || { steps: 0, calories_burned: 0, date: dateKey };
+    };
+
     const parseIngredientAmount = (amountStr: string) => {
         const s = amountStr.toLowerCase().trim();
         // 1. Metric at START
@@ -576,103 +805,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         setCameraModalOpen(true);
     };
 
-    // --- GOOGLE FIT INTEGRATION ---
 
-    const handleGoogleFitImport = async () => {
-        setImportingGoogleFit(true);
-
-        try {
-            // Connect to Google Fit
-            await GoogleFitWebService.connect();
-
-            // Import data from last 30 days
-            const data = await GoogleFitWebService.importData(30);
-
-            // Get current user ID from auth
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-            const userId = authUser?.id || 'demo-user';
-
-            // Save to Supabase
-            for (let i = 0; i < data.steps.length; i++) {
-                const stepData = data.steps[i];
-                const calorieData = data.calories.find(c => c.date === stepData.date);
-
-                // Use upsert to handle duplicates
-                const { error } = await supabase.from('smartwatch_data').upsert({
-                    user_id: userId,
-                    date: stepData.date,
-                    steps: stepData.steps,
-                    calories_burned: calorieData?.calories || 0,
-                    source: 'google_fit_import',
-                    created_at: new Date().toISOString()
-                }, {
-                    onConflict: 'user_id,date'
-                });
-
-                if (error) {
-                    console.error('Error saving smartwatch data:', error);
-                }
-            }
-
-            alert(`✅ Dados do Google Fit importados com sucesso!\n\n📊 ${data.steps.length} dias de dados salvos.`);
-            console.log('Google Fit data imported successfully:', data);
-
-            // Recarregar dados para exibir
-            await fetchGoogleFitData();
-
-        } catch (error) {
-            console.error('Erro ao importar Google Fit:', error);
-            alert('❌ Falha ao importar dados do Google Fit.\n\nVerifique se você configurou o REACT_APP_GOOGLE_CLIENT_ID nas variáveis de ambiente.');
-        } finally {
-            setImportingGoogleFit(false);
-        }
-    };
-
-    // --- GOOGLE FIT DATA FETCHING ---
-
-    const fetchGoogleFitData = async () => {
-        setLoadingGoogleFitData(true);
-        try {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-            const userId = authUser?.id || 'demo-user';
-
-            // Buscar dados dos últimos 30 dias
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-            const { data, error } = await supabase
-                .from('smartwatch_data')
-                .select('date, steps, calories_burned')
-                .eq('user_id', userId)
-                .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
-                .order('date', { ascending: true });
-
-            if (error) {
-                console.error('Error fetching Google Fit data:', error);
-                return;
-            }
-
-            setGoogleFitData(data || []);
-        } catch (error) {
-            console.error('Error fetching Google Fit data:', error);
-        } finally {
-            setLoadingGoogleFitData(false);
-        }
-    };
-
-    // Calcular Taxa Metabólica Basal (TMB) usando fórmula Harris-Benedict
-    const calculateBMR = (): number => {
-        if (user.gender === Gender.Male) {
-            return Math.round(88.362 + (13.397 * user.weight) + (4.799 * user.height) - (5.677 * user.age));
-        } else {
-            return Math.round(447.593 + (9.247 * user.weight) + (3.098 * user.height) - (4.330 * user.age));
-        }
-    };
-
-    // Obter dados do Google Fit para uma data específica
-    const getGoogleFitDataForDate = (dateKey: string) => {
-        return googleFitData.find(d => d.date === dateKey) || { steps: 0, calories_burned: 0 };
-    };
 
 
 
@@ -1784,101 +1917,53 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </div>
                 )}
 
-                {/* GOOGLE FIT IMPORT BUTTON */}
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                            <Activity className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-white font-bold text-sm">Sincronizar Google Fit</h3>
-                            <p className="text-blue-100 text-[10px]">Importe seus dados de atividade física</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleGoogleFitImport}
-                        disabled={importingGoogleFit}
-                        className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm active:scale-95 transition-all hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {importingGoogleFit ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>Importando...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Activity className="w-4 h-4" />
-                                <span>Importar</span>
-                            </>
-                        )}
-                    </button>
-                </div>
-
-                {/* ACTIVITY SUMMARY CARD */}
+                {/* COMPACT ACTIVITY ROW (GOOGLE FIT) */}
                 {googleFitData.length > 0 && (
-                    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
-                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-green-600" />
-                            Atividade Física (Hoje)
-                        </h2>
-
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-4">
                         {(() => {
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
-                            const totalCaloriesExpended = bmr + todayData.calories_burned;
+                            const totalExpended = bmr + todayData.calories_burned;
                             const stepsGoal = 10000;
                             const stepsProgress = Math.min((todayData.steps / stepsGoal) * 100, 100);
 
                             return (
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    {/* Passos */}
-                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Passos</span>
-                                            <span className="text-xs text-green-600">{Math.round(stepsProgress)}%</span>
+                                <>
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-green-100 p-2 rounded-lg">
+                                            <Footprints className="w-5 h-5 text-green-600" />
                                         </div>
-                                        <div className="text-2xl font-black text-green-900 mb-1">
-                                            {todayData.steps.toLocaleString()}
-                                        </div>
-                                        <div className="text-xs text-green-600 mb-2">Meta: {stepsGoal.toLocaleString()}</div>
-                                        <div className="w-full bg-green-200 rounded-full h-2">
-                                            <div
-                                                className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
-                                                style={{ width: `${stepsProgress}%` }}
-                                            />
+                                        <div>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passos</p>
+                                            <p className="text-sm font-black text-gray-800">{todayData.steps.toLocaleString()}<span className="text-[10px] font-bold text-gray-400 ml-1">/ {stepsGoal.toLocaleString()}</span></p>
                                         </div>
                                     </div>
 
-                                    {/* Calorias Queimadas */}
-                                    <div className="bg-gradient-to-br from-orange-50 to-red-50 p-4 rounded-xl border border-orange-100">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Atividade</span>
-                                            <Flame className="w-4 h-4 text-orange-500" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-orange-100 p-2 rounded-lg">
+                                            <Flame className="w-5 h-5 text-orange-600" />
                                         </div>
-                                        <div className="text-2xl font-black text-orange-900 mb-1">
-                                            {todayData.calories_burned}
+                                        <div>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Atividade</p>
+                                            <p className="text-sm font-black text-gray-800">{todayData.calories_burned}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
                                         </div>
-                                        <div className="text-xs text-orange-600">kcal queimadas</div>
                                     </div>
 
-                                    {/* Gasto Total */}
-                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Gasto Total</span>
-                                            <TrendingUp className="w-4 h-4 text-blue-500" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-blue-100 p-2 rounded-lg">
+                                            <TrendingUp className="w-5 h-5 text-blue-600" />
                                         </div>
-                                        <div className="text-2xl font-black text-blue-900 mb-1">
-                                            {totalCaloriesExpended}
-                                        </div>
-                                        <div className="text-xs text-blue-600">
-                                            TMB ({bmr}) + Atividade ({todayData.calories_burned})
+                                        <div>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gasto Total</p>
+                                            <p className="text-sm font-black text-gray-800">{totalExpended}<span className="text-[10px] font-bold text-gray-400 ml-1">kcal</span></p>
                                         </div>
                                     </div>
-                                </div>
+                                </>
                             );
                         })()}
                     </div>
                 )}
+
 
                 {/* HEADER GAUGES */}
                 <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm">
@@ -1918,7 +2003,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                                     <button
                                         onClick={() => setIsDeficitModalOpen(true)}
                                         className="absolute top-2 right-2 bg-blue-50 hover:bg-blue-100 text-blue-600 p-1.5 rounded-lg transition-colors"
-                                        title="Editar meta de déficit"
+                                        title="Editar meta de deficit"
                                     >
                                         <Edit3 className="w-3.5 h-3.5" />
                                     </button>
@@ -1928,198 +2013,197 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
                     </div>
                 </div>
 
-                {/* MACROS CARD */}
-                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Droplets className="w-5 h-5 text-blue-500" />
-                        Macronutrientes (Hoje)
-                    </h3>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-4">
-                        {/* PROTEIN */}
-                        <div>
-                            <div className="flex justify-between items-end mb-1">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
-                                    <Beef className="w-3.5 h-3.5" /> Proteínas
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.protein)}</span> / {todayMacros.targets.protein}g
-                                </div>
-                            </div>
-                            <div className="h-2 w-full bg-indigo-50 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-indigo-500 rounded-full transition-all duration-700"
-                                    style={{ width: `${Math.min((todayMacros.consumed.protein / todayMacros.targets.protein) * 100, 100)}%` }}
-                                ></div>
-                            </div>
-                        </div>
+                        {/* MACROS CARD */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm h-full">
+                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Droplets className="w-5 h-5 text-blue-500" />
+                                Macronutrientes (Hoje)
+                            </h3>
 
-                        {/* CARBS */}
-                        <div>
-                            <div className="flex justify-between items-end mb-1">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                                    <Wheat className="w-3.5 h-3.5" /> Carboidratos
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.carbs)}</span> / {todayMacros.targets.carbs}g
-                                </div>
-                            </div>
-                            <div className="h-2 w-full bg-amber-50 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                                    style={{ width: `${Math.min((todayMacros.consumed.carbs / todayMacros.targets.carbs) * 100, 100)}%` }}
-                                ></div>
-                            </div>
-                        </div>
-
-                        {/* FATS */}
-                        <div>
-                            <div className="flex justify-between items-end mb-1">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900">
-                                    <Droplets className="w-3.5 h-3.5" /> Gorduras
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.fats)}</span> / {todayMacros.targets.fats}g
-                                </div>
-                            </div>
-                            <div className="h-2 w-full bg-rose-50 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-rose-500 rounded-full transition-all duration-700"
-                                    style={{ width: `${Math.min((todayMacros.consumed.fats / todayMacros.targets.fats) * 100, 100)}%` }}
-                                ></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* QUICK ACTIONS */}
-                <div className="space-y-4">
-
-                    {/* WORKOUT CHECK-IN */}
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-brand-100 p-2 rounded-full text-brand-600">
-                                    <Dumbbell className="w-5 h-5" />
-                                </div>
+                            <div className="space-y-4">
+                                {/* PROTEIN */}
                                 <div>
-                                    <h3 className="font-bold text-gray-900">Treino de Hoje</h3>
-                                    <p className="text-xs text-gray-500">{todayWorkout.focus || "Descanso"}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => toggleWorkoutCompletion(todayKey)}
-                            className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95 ${isWorkoutDoneToday
-                                ? 'bg-green-100 text-green-700 border border-green-200'
-                                : 'bg-brand-600 text-white shadow-lg shadow-brand-200 hover:bg-brand-700'
-                                }`}
-                        >
-                            {isWorkoutDoneToday ? (
-                                <>
-                                    <CheckCircle2 className="w-5 h-5" />
-                                    Treino Concluído!
-                                </>
-                            ) : (
-                                <>
-                                    <PlayCircle className="w-5 h-5" />
-                                    Check-in do Treino
-                                </>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* GLOBAL ADICIONAR ALIMENTO */}
-                    <div className="relative group">
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-500 to-orange-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                        <button
-                            onClick={() => {
-                                // Encontrar a refeição mais próxima do horário atual
-                                const now = new Date();
-                                const currentHour = now.getHours();
-                                let closestMeal = (plan.nutrition?.meals || [])[0];
-                                let minDiff = 24;
-
-                                (plan.nutrition?.meals || []).forEach(m => {
-                                    const mealHour = parseInt(m.time);
-                                    const diff = Math.abs(currentHour - mealHour);
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        closestMeal = m;
-                                    }
-                                });
-                                if (closestMeal) startCamera(closestMeal.id, 'log');
-                            }}
-                            className="relative w-full bg-white border border-brand-100 p-4 rounded-xl shadow-md flex items-center justify-between hover:border-brand-300 transition-all active:scale-[0.98]"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="bg-gradient-to-br from-brand-600 to-indigo-600 p-3 rounded-xl text-white shadow-lg shadow-brand-200">
-                                    <Aperture className="w-6 h-6 animate-pulse" />
-                                </div>
-                                <div className="text-left">
-                                    <h3 className="font-bold text-gray-900">Analisar Alimento (IA)</h3>
-                                    <p className="text-xs text-brand-600 font-medium italic">Food Lens AI • Instantâneo</p>
-                                </div>
-                            </div>
-                            <div className="bg-brand-50 p-2 rounded-lg text-brand-500 group-hover:bg-brand-100 transition-colors">
-                                <ChevronRight className="w-5 h-5" />
-                            </div>
-                        </button>
-                    </div>
-
-                    {/* MEAL CHECK-IN */}
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-orange-100 p-2 rounded-full text-orange-600">
-                                <Apple className="w-5 h-5" />
-                            </div>
-                            <h3 className="font-bold text-gray-900">Refeições de Hoje</h3>
-                        </div>
-
-                        <div className="space-y-3">
-                            {(plan.nutrition?.meals || []).map((meal) => {
-                                const isConsumed = consumedMeals.has(`${todayKey}_${meal.id}`);
-                                return (
-                                    <div key={meal.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => toggleMealConsumption(meal.id, todayKey)}
-                                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isConsumed ? 'bg-orange-500 border-orange-500' : 'border-gray-300'
-                                                    }`}
-                                            >
-                                                {isConsumed && <Check className="w-3.5 h-3.5 text-white" />}
-                                            </button>
-                                            <div>
-                                                <p className={`text-sm font-bold ${isConsumed ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{meal.name}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    {(() => {
-                                                        return getComputedMealCalories(meal, todayKey);
-                                                    })()} kcal
-                                                </p>
-                                            </div>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-900">
+                                            <Beef className="w-3.5 h-3.5" /> Proteínas
                                         </div>
-
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-medium text-gray-500">{meal.time}</span>
-                                            {/* Botão de Câmera Rápida */}
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); openMealCamera(meal.id, meal.name); }}
-                                                className="p-1.5 bg-brand-50 text-brand-600 rounded-full hover:bg-brand-100 transition-colors active:scale-95"
-                                                title="Atualizar refeição com foto"
-                                            >
-                                                <Camera className="w-4 h-4" />
-                                            </button>
+                                        <div className="text-xs text-gray-500">
+                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.protein)}</span> / {todayMacros.targets.protein}g
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    <div className="h-2 w-full bg-indigo-50 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-indigo-500 rounded-full transition-all duration-700"
+                                            style={{ width: `${Math.min((todayMacros.consumed.protein / todayMacros.targets.protein) * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {/* CARBS */}
+                                <div>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                                            <Wheat className="w-3.5 h-3.5" /> Carboidratos
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.carbs)}</span> / {todayMacros.targets.carbs}g
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-full bg-amber-50 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-amber-500 rounded-full transition-all duration-700"
+                                            style={{ width: `${Math.min((todayMacros.consumed.carbs / todayMacros.targets.carbs) * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                {/* FATS */}
+                                <div>
+                                    <div className="flex justify-between items-end mb-1">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900">
+                                            <Droplets className="w-3.5 h-3.5" /> Gorduras
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            <span className="font-bold text-gray-800">{Math.round(todayMacros.consumed.fats)}</span> / {todayMacros.targets.fats}g
+                                        </div>
+                                    </div>
+                                    <div className="h-2 w-full bg-rose-50 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                                            style={{ width: `${Math.min((todayMacros.consumed.fats / todayMacros.targets.fats) * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
+                    <div className="space-y-4">
+                        {/* QUICK ACTIONS */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-yellow-500" />
+                                Ações Rápidas
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => startCamera(null, 'log')}
+                                    className="flex flex-col items-center justify-center p-4 bg-orange-50 border border-orange-100 rounded-xl hover:bg-orange-100 transition-colors group"
+                                >
+                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-orange-100 mb-2 group-hover:scale-110 transition-transform">
+                                        <Camera className="w-6 h-6 text-orange-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-orange-900">AI Food Analysis</span>
+                                </button>
+
+                                <button
+                                    onClick={fetchGoogleFitData}
+                                    className="flex flex-col items-center justify-center p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors group"
+                                >
+                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-blue-100 mb-2 group-hover:scale-110 transition-transform">
+                                        <RefreshCw className={`w-6 h-6 text-blue-600 ${loadingGoogleFitData ? 'animate-spin' : ''}`} />
+                                    </div>
+                                    <span className="text-xs font-bold text-blue-900">Sync Smartwatch</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* MEAL CHECK-IN */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+                                <Utensils className="w-4 h-4 text-orange-500" />
+                                Refeições de Hoje
+                            </h3>
+                            <div className="space-y-2">
+                                {(plan.nutrition?.meals || []).map(meal => {
+                                    const key = `${todayKey}_${meal.id}`;
+                                    const isDone = consumedMeals.has(key);
+                                    return (
+                                        <button
+                                            key={meal.id}
+                                            onClick={() => {
+                                                const newConsumed = new Set(consumedMeals);
+                                                if (isDone) newConsumed.delete(key);
+                                                else newConsumed.add(key);
+                                                setConsumedMeals(newConsumed);
+                                            }}
+                                            className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${isDone ? 'bg-green-50 border-green-200 opacity-75' : 'bg-white border-gray-100 hover:border-orange-200'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-200'}`}>
+                                                    {isDone && <Check className="w-3.5 h-3.5" />}
+                                                </div>
+                                                <span className={`text-sm font-bold ${isDone ? 'text-green-800 line-through' : 'text-gray-700'}`}>{meal.name}</span>
+                                            </div>
+                                            {!isDone && <span className="text-[10px] font-bold text-gray-400">{meal.time}</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* WORKOUT CHECK-IN */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+                                <Dumbbell className="w-4 h-4 text-brand-500" />
+                                Treino de Hoje
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    const newLog = new Set(workoutLog);
+                                    if (isWorkoutDoneToday) newLog.delete(todayKey);
+                                    else newLog.add(todayKey);
+                                    setWorkoutLog(newLog);
+                                }}
+                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${isWorkoutDoneToday ? 'bg-brand-50 border-brand-200' : 'bg-white border-gray-100 hover:border-brand-200'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isWorkoutDoneToday ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-200 text-transparent'}`}>
+                                        <Check className="w-4 h-4" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className={`text-sm font-bold ${isWorkoutDoneToday ? 'text-brand-900' : 'text-gray-800'}`}>{todayWorkout.focus}</p>
+                                        <p className="text-[10px] text-gray-500">{(todayWorkout.exercises || []).length} exercícios planejados</p>
+                                    </div>
+                                </div>
+                                {!isWorkoutDoneToday && (
+                                    <div className="bg-brand-100 text-brand-600 p-2 rounded-lg">
+                                        <Zap className="w-4 h-4" />
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* CONNECT GOOGLE FIT OPTIONAL PROMPT */}
+                        {googleFitData.length === 0 && (
+                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl border border-blue-100">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="bg-white p-2 rounded-lg shadow-sm">
+                                        <Smartphone className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-blue-900">Conectar Google Fit</p>
+                                        <p className="text-[10px] text-blue-700">Sincronize passos e calorias automaticamente</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleGoogleFitImport}
+                                    className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all"
+                                >
+                                    Conectar Agora
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-        )
+        );
     };
+
 
     const renderWorkout = () => (
         <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -2869,164 +2953,7 @@ export const Dashboard: React.FC<Props> = ({ plan, user, onReset, onUpdatePlan }
         );
     };
 
-    const handleSmartImport = async (content: string, type: 'image' | 'text') => {
-        setImportStatus('loading');
-        setImportError(null);
-        try {
-            const imported = await EdgeFunctionService.parsePlan(content, type, importDistributeByDays);
 
-            // Auto toggle based on what was found
-            const hasMeals = (imported.nutrition?.meals?.length || 0) > 0;
-            const hasWorkout = (imported.workout?.weeklySchedule?.length || 0) > 0;
-
-            setImportDietSelected(hasMeals);
-            setImportWorkoutSelected(hasWorkout);
-
-            setImportedPlan(imported);
-            setImportStatus('review');
-        } catch (error: any) {
-            setImportError(error.message || 'Erro ao processar plano');
-            setImportStatus('idle');
-        }
-    };
-
-    const cleanDayNamesFromImportedPlan = () => {
-        if (!importedPlan) return;
-
-        const daysToStrip = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
-        const stripPattern = new RegExp(`^(${daysToStrip.join('|')})(-feira)?(:)?\\s*`, 'i');
-
-        const newPlan = { ...importedPlan };
-        if (newPlan.nutrition?.meals) {
-            newPlan.nutrition.meals = newPlan.nutrition.meals.map(meal => ({
-                ...meal,
-                options: (meal.options || []).map(opt => ({
-                    ...opt,
-                    name: opt.name.replace(stripPattern, '').trim() || opt.name
-                }))
-            }));
-        }
-        setImportedPlan(newPlan);
-    };
-
-    const confirmSmartImport = async () => {
-        if (importedPlan) {
-            // Backup current plan and selections
-            const currentMealCount = plan.nutrition?.meals?.length || 0;
-            if (currentMealCount >= 3) {
-                setBackupPlan(plan);
-                setBackupSelections(mealSelections);
-                localStorage.setItem('fitcoach_backup_plan', JSON.stringify(plan));
-                localStorage.setItem('fitcoach_backup_selections', JSON.stringify(mealSelections));
-            }
-
-            // SMART MERGE: Build the final plan based on selections
-            const finalPlan = { ...plan };
-
-            if (importDietSelected && importedPlan.nutrition) {
-                finalPlan.nutrition = importedPlan.nutrition;
-            }
-
-            if (importWorkoutSelected && importedPlan.workout) {
-                finalPlan.workout = importedPlan.workout;
-            }
-
-            // Apply merged plan
-            onUpdatePlan(finalPlan);
-
-            // Handle meal selections only if diet was imported
-            if (importDietSelected && finalPlan.nutrition?.meals) {
-                const newSelections = { ...mealSelections };
-                const today = new Date();
-
-                for (let i = 0; i < 7; i++) {
-                    const futureDate = new Date(today);
-                    futureDate.setDate(today.getDate() + i);
-                    const dKey = getDateKey(futureDate);
-
-                    finalPlan.nutrition.meals.forEach(meal => {
-                        const sKey = `${dKey}_${meal.id}`;
-                        const opts = getMealOptions(meal);
-                        if (opts.length > 0) {
-                            newSelections[sKey] = getOptionIndexForDate(opts, dKey);
-                        }
-                    });
-                }
-                setMealSelections(newSelections);
-                localStorage.setItem('fitcoach_selections', JSON.stringify(newSelections));
-            }
-
-            setIsSmartImportModalOpen(false);
-            setImportedPlan(null);
-            setImportStatus('idle');
-        }
-    };
-
-    const undoImport = () => {
-        if (backupPlan) {
-            onUpdatePlan(backupPlan);
-            if (Object.keys(backupSelections).length > 0) {
-                setMealSelections(backupSelections);
-                localStorage.setItem('fitcoach_selections', JSON.stringify(backupSelections));
-            }
-            setBackupPlan(null);
-            setBackupSelections({});
-            localStorage.removeItem('fitcoach_backup_plan');
-            localStorage.removeItem('fitcoach_backup_selections');
-        }
-    };
-
-    const handleRepairPlan = async () => {
-        if (confirm("Seu plano parece incompleto. Deseja tentar restaurar o plano original da IA?")) {
-            setImportStatus('loading');
-            try {
-                const repairedPlan = await EdgeFunctionService.generatePlan(user);
-                onUpdatePlan(repairedPlan);
-                alert("Plano restaurado com sucesso!");
-            } catch (error) {
-                alert("Erro ao restaurar: " + (error as any).message);
-            } finally {
-                setImportStatus('idle');
-            }
-        }
-    };
-
-    const handleAddMeal = () => {
-        const mealName = prompt("Qual o nome da nova refeição? (Ex: Lanche da Tarde)");
-        if (!mealName) return;
-
-        const newMeal: Meal = {
-            id: `meal-${Date.now()}`,
-            name: mealName,
-            time: "16:00",
-            calories: 0,
-            macros: { protein: 0, carbs: 0, fats: 0 },
-            options: [
-                {
-                    id: `opt-${Date.now()}`,
-                    name: "Opção Padrão",
-                    description: "Clique em 'Adicionar Alimento' para montar esta refeição",
-                    ingredients: [],
-                    calories: 0,
-                    macros: { protein: 0, carbs: 0, fats: 0 }
-                }
-            ]
-        };
-
-        const newPlan = { ...plan };
-        if (!newPlan.nutrition) {
-            newPlan.nutrition = {
-                bmr: 0,
-                tdee: 0,
-                targetCalories: 2000,
-                waterIntake: 2000,
-                meals: []
-            };
-        }
-        newPlan.nutrition.meals = [...(newPlan.nutrition.meals || []), newMeal];
-        onUpdatePlan(newPlan);
-        setExpandedMeal(newMeal.id);
-    };
 
     const renderSmartImportModal = () => {
         if (!isSmartImportModalOpen) return null;
