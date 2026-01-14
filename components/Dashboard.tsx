@@ -1510,11 +1510,29 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     const handleAddFood = (food: FoodItem) => {
         const targetDateKey = cameraTargetMealId ? todayKey : selectedDateKey;
 
-        // Try to get target meal, fallback to first meal if not set (e.g. from Quick Action)
+        // Try to get target meal, fallback to closest meal by time if not set (e.g. from Quick Action)
         let targetMealId = cameraTargetMealId || currentMealIdForAdd;
 
         if (!targetMealId && plan.nutrition?.meals && plan.nutrition.meals.length > 0) {
-            targetMealId = plan.nutrition.meals[0].id;
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            let closestMealId = plan.nutrition.meals[0].id;
+            let minDiff = Infinity;
+
+            plan.nutrition.meals.forEach(meal => {
+                if (!meal.time) return;
+                const [h, m] = meal.time.split(':').map(Number);
+                const mealMinutes = h * 60 + m;
+                const diff = Math.abs(currentMinutes - mealMinutes);
+
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestMealId = meal.id;
+                }
+            });
+
+            targetMealId = closestMealId;
         }
 
         if (targetMealId) {
