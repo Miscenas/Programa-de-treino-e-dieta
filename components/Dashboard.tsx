@@ -1509,7 +1509,13 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     };
     const handleAddFood = (food: FoodItem) => {
         const targetDateKey = cameraTargetMealId ? todayKey : selectedDateKey;
-        const targetMealId = cameraTargetMealId || currentMealIdForAdd;
+
+        // Try to get target meal, fallback to first meal if not set (e.g. from Quick Action)
+        let targetMealId = cameraTargetMealId || currentMealIdForAdd;
+
+        if (!targetMealId && plan.nutrition?.meals && plan.nutrition.meals.length > 0) {
+            targetMealId = plan.nutrition.meals[0].id;
+        }
 
         if (targetMealId) {
             setDietHistory(prev => {
@@ -1521,17 +1527,23 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 };
             });
 
-            if (cameraTargetMealId) {
-                const key = `${todayKey}_${cameraTargetMealId}`;
-                const newConsumed = new Set(consumedMeals);
-                newConsumed.add(key);
-                setConsumedMeals(newConsumed);
-            }
+            // If we used a fallback ID or camera target, calculate the consumed key correcty
+            const consumptionKey = `${targetDateKey}_${targetMealId}`;
+            setConsumedMeals(prev => {
+                const next = new Set(prev);
+                next.add(consumptionKey);
+                return next;
+            });
 
             setFoodModalOpen(false);
             setCameraOpen(false);
             setAnalyzedFood(null);
             setCameraTargetMealId(null);
+
+            // Optional: User feedback could be improved here
+            // alert(`Adicionado com sucesso!`);
+        } else {
+            alert("Não foi possível identificar a refeição de destino. Por favor, selecione uma refeição.");
         }
     };
 
