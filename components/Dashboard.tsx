@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot, Lock, Unlock } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot, Lock, Unlock, List } from 'lucide-react';
 import { FoodPreferencesModal } from './FoodPreferencesModal';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory, generatePlan } from '../services/expertSystem';
@@ -251,6 +251,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     }>>([]);
     const [loadingGoogleFitData, setLoadingGoogleFitData] = useState(false);
     const [selectedProgressData, setSelectedProgressData] = useState<any>(null);
+    const [selectedMeasurementType, setSelectedMeasurementType] = useState<'weight' | 'fat' | 'waist' | null>(null);
 
     // Caloric Deficit Goal State
     const [deficitGoal, setDeficitGoal] = useState<number>(() => {
@@ -1343,6 +1344,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
         // Helper to calculate daily balance with overrides
         const calculateDailyBalance = (dKey: string) => {
+            // Strict Future Check: Never calculate balance for future days
+            if (dKey > todayKey) return 0;
+
             const isDayClosed = closedDays.has(dKey);
             const planMeals = plan.nutrition?.meals || [];
 
@@ -1380,6 +1384,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
             if (manualExtra !== undefined) {
                 activeBurn = manualExtra;
             } else if (fitCals > 0) {
+                // Google Fit returns TOTAL calories (BMR + Active).
+                // We need ONLY active calories since we add BMR separately.
+                // Subtract BMR to get active portion only.
                 activeBurn = Math.max(0, fitCals - bmr);
             }
 
@@ -2113,7 +2120,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
     // --- PREMIUM UI COMPONENTS ---
 
-    const PremiumLineChart = ({ data, color, yLabel }: { data: { date: string, value: number }[], color: string, yLabel: string }) => {
+    const PremiumLineChart = ({ data, color, yLabel, onClick }: { data: { date: string, value: number }[], color: string, yLabel: string, onClick?: () => void }) => {
         if (data.length < 2) {
             return (
                 <div className="h-48 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
@@ -2150,7 +2157,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         const areaPath = `${dPath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
 
         return (
-            <div className="relative group w-full h-full">
+            <div
+                className={`relative group w-full h-full ${onClick ? 'cursor-pointer' : ''}`}
+                onClick={onClick}
+            >
                 <svg viewBox={`0 0 ${width} ${height} `} className="w-full h-full overflow-visible">
                     <defs>
                         <linearGradient id={`gradient - ${color.replace('#', '')} `} x1="0" y1="0" x2="0" y2="1">
@@ -2419,7 +2429,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                             )}
                         </div>
                         <div className="h-48">
-                            <PremiumLineChart data={weightChartData.slice(-10)} color="#6366f1" yLabel="kg" />
+                            <PremiumLineChart data={weightChartData.slice(-10)} color="#6366f1" yLabel="kg" onClick={() => setSelectedMeasurementType('weight')} />
                         </div>
                     </div>
 
@@ -2436,7 +2446,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                             )}
                         </div>
                         <div className="h-48">
-                            <PremiumLineChart data={fatChartData.slice(-10)} color="#f43f5e" yLabel="%" />
+                            <PremiumLineChart data={fatChartData.slice(-10)} color="#f43f5e" yLabel="%" onClick={() => setSelectedMeasurementType('fat')} />
                         </div>
                     </div>
 
@@ -2453,11 +2463,89 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                             )}
                         </div>
                         <div className="h-48">
-                            <PremiumLineChart data={waistChartData.slice(-10)} color="#10b981" yLabel="cm" />
+                            <PremiumLineChart data={waistChartData.slice(-10)} color="#10b981" yLabel="cm" onClick={() => setSelectedMeasurementType('waist')} />
                         </div>
                     </div>
                 </div>
 
+
+                {/* MEASUREMENT DETAILS TABLE */}
+                {selectedMeasurementType && (
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300 mt-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                                <List className="w-5 h-5 text-gray-400" />
+                                Histórico Detalhado: {selectedMeasurementType === 'weight' ? 'Peso Corporal' : selectedMeasurementType === 'fat' ? 'Gordura Corporal' : 'Medida Abdominal'}
+                            </h3>
+                            <button
+                                onClick={() => setSelectedMeasurementType(null)}
+                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-xs font-bold transition-colors"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 font-bold uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3">Data da Medição</th>
+                                        <th className="px-4 py-3 text-right">Valor Registrado</th>
+                                        <th className="px-4 py-3 text-right">Evolução</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {(() => {
+                                        let historyData: Record<string, number> = {};
+                                        let unit = '';
+                                        if (selectedMeasurementType === 'weight') { historyData = weightHistory; unit = 'kg'; }
+                                        else if (selectedMeasurementType === 'fat') { historyData = bodyFatHistory; unit = '%'; }
+                                        else { historyData = waistHistory; unit = 'cm'; }
+
+                                        const sortedDates = Object.keys(historyData).sort((a, b) => b.localeCompare(a)); // Newest first
+
+                                        if (sortedDates.length === 0) {
+                                            return (
+                                                <tr>
+                                                    <td colSpan={3} className="px-4 py-8 text-center text-gray-400">Nenhum registro encontrado.</td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        return sortedDates.map((date, index) => {
+                                            const currentVal = historyData[date];
+                                            const prevDate = sortedDates[index + 1];
+                                            const prevVal = prevDate ? historyData[prevDate] : currentVal;
+                                            const diff = currentVal - prevVal;
+                                            const displayDate = new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+
+                                            return (
+                                                <tr key={date} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white capitalize">{displayDate}</td>
+                                                    <td className="px-4 py-3 text-right font-bold text-gray-700 dark:text-gray-200">{currentVal} {unit}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        {index === sortedDates.length - 1 ? (
+                                                            <span className="text-gray-400 text-[10px] font-bold">-</span>
+                                                        ) : (
+                                                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${diff < 0
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : diff > 0
+                                                                    ? 'bg-red-100 text-red-700'
+                                                                    : 'bg-gray-100 text-gray-500'
+                                                                }`}>
+                                                                {diff > 0 ? '+' : ''}{diff.toFixed(1)} {unit}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
 
                 {/* MEASUREMENT MODAL */}
                 {isMeasurementModalOpen && (
@@ -2614,7 +2702,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 if (manualExtra !== undefined) {
                     extra = manualExtra;
                 } else if (totalFit > 0) {
-                    extra = Math.max(0, totalFit - bmr);
+                    extra = totalFit;
                 }
 
                 const balance = (bmr + extra) - consumed;
@@ -2724,14 +2812,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         {(() => {
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
-                            const googleFitTotal = todayData.calories_burned || 0;
+                            // Google Fit data here apparently represents Active Calories (historically ~500kcal, less than BMR)
+                            const googleFitActive = todayData.calories_burned || 0;
 
-                            // If we have Google Fit data, use it as the source of truth for Total.
-                            // If it's less than BMR (e.g. start of day), fallback to BMR.
-                            const totalExpended = googleFitTotal > 0 ? Math.max(googleFitTotal, bmr) : bmr;
+                            // Calculate Total Expended: BMR + Active from Google Fit
+                            const totalExpended = bmr + googleFitActive;
 
-                            // Calculate "Active" portion for display
-                            const activeCalories = Math.max(0, totalExpended - bmr);
+                            // Active portion is just the Google Fit data
+                            const activeCalories = googleFitActive;
 
                             const stepsGoal = 10000;
                             const stepsProgress = Math.min((todayData.steps / stepsGoal) * 100, 100);
@@ -2756,12 +2844,9 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                                             <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Atividade</p>
                                             <p className="text-sm font-black text-gray-800 dark:text-gray-200">
                                                 {activeCalories}<span className="text-[10px] font-bold text-gray-400 dark:text-gray-600 ml-1">kcal</span>
-                                                {googleFitTotal > 0 && googleFitTotal < bmr && (
-                                                    <span className="block text-[9px] text-gray-400 dark:text-gray-500 font-medium">Fit Total: {googleFitTotal}</span>
-                                                )}
                                             </p>
                                         </div>
-                                    </div>
+                                    </div >
 
                                     <div className="flex items-center gap-3">
                                         <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
@@ -2776,7 +2861,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                             );
                         })()}
                     </div>
-                )}
+                )
+                }
 
 
                 {/* HEADER GAUGES */}
