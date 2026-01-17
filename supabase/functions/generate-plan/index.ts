@@ -32,6 +32,7 @@ serve(async (req) => {
       - Objetivo: ${userProfile.goal === 'WEIGHT_LOSS' ? 'Emagrecimento' : 'Ganho de Massa'}
       - Peso: ${userProfile.weight}kg | Altura: ${userProfile.height}cm
       - Nível de Atividade: ${userProfile.activityLevel}
+      ${userProfile.targetDeficit ? `- Meta de Déficit/Superávit: ${userProfile.targetDeficit} kcal (USE EXATAMENTE ESSE VALOR PARA CALCULAR A META FINAL)` : ''}
       - Preferências: ${userProfile.foodPreferences?.join(', ') || 'Nenhuma'}
       - Restrições: ${userProfile.foodRestrictions?.join(', ') || 'Nenhuma'}
 

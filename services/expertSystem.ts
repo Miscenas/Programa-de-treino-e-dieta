@@ -345,8 +345,13 @@ const generateNutritionPlan = (user: UserProfile, bmr: number): NutritionPlan =>
   const tdee = Math.round(bmr * activityMultiplier);
   let targetCalories = tdee;
 
-  if (user.goal === Goal.WeightLoss) targetCalories -= 500;
-  else targetCalories += 300;
+  if (user.targetDeficit !== undefined) {
+    targetCalories = tdee + user.targetDeficit;
+  } else if (user.goal === Goal.WeightLoss) {
+    targetCalories -= 500;
+  } else {
+    targetCalories += 300;
+  }
 
   if (user.gender === Gender.Female && targetCalories < 1200) targetCalories = 1200;
   if (user.gender === Gender.Male && targetCalories < 1500) targetCalories = 1500;

@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FullPlan, UserProfile, FoodItem, ShoppingItem, MealOption, Meal, Exercise, Gender } from '../types';
-import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot, Lock, Unlock, List } from 'lucide-react';
+import { Droplets, Flame, Dumbbell, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Apple, ShoppingBasket, Printer, Clock, RefreshCw, LayoutDashboard, Plus, PlusCircle, Search, X, Trash2, CalendarRange, ChevronLeft, ChevronRight, Check, Save, Star, Users, CheckSquare, Square, ArrowDown, Share2, Circle, PlayCircle, Beef, Wheat, Sandwich, ArrowLeft, PenSquare, BookOpen, Edit2, Edit3, Camera, Aperture, Loader2, Sparkles, ScanLine, Utensils, Scale, TrendingUp, ListChecks, Eraser, Activity, Footprints, Zap, Smartphone, Settings2, Info, Carrot, Lock, Unlock, List, Calculator } from 'lucide-react';
 import { FoodPreferencesModal } from './FoodPreferencesModal';
+import { BMRCalculator } from './BMRCalculator';
 import { foodDatabase } from '../services/foodDatabase';
 import { getIngredientCategory, generatePlan } from '../services/expertSystem';
 import { exerciseDatabase, LibraryExercise } from '../services/exerciseDatabase';
@@ -277,6 +278,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
     const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
     const [isDeficitBreakdownOpen, setIsDeficitBreakdownOpen] = useState(false);
+    const [isBMRCalculationModalOpen, setIsBMRCalculationModalOpen] = useState(false);
+    const [isBMRCalculatorOpen, setIsBMRCalculatorOpen] = useState(false);
     const [showCelebrationMessage, setShowCelebrationMessage] = useState(false);
 
     // Nutrition Goals Selection (Target calories/macros)
@@ -713,11 +716,15 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         const height = user.height;
         const age = user.age;
 
-        if (user.gender === 'male' || user.gender === 'masculino') {
-            return Math.round(88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age));
+        const gender = user.gender?.toString().toLowerCase();
+        let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+
+        if (gender === 'male' || gender === 'masculino' || gender === 'gender.male') {
+            bmr += 5;
         } else {
-            return Math.round(447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age));
+            bmr -= 161;
         }
+        return Math.round(bmr);
     };
 
     const getGoogleFitDataForDate = (dateKey: string) => {
@@ -1338,24 +1345,21 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
 
     const getWeeklyDeficit = () => {
         let totalBalance = 0;
+        let activeDays = 0;
         const bmr = calculateBMR();
         const today = new Date();
         const todayKey = getDateKey(today);
+        const dayResults: any[] = [];
 
-        // Helper to calculate daily balance with overrides
-        const calculateDailyBalance = (dKey: string) => {
-            // Strict Future Check: Never calculate balance for future days
-            if (dKey > todayKey) return 0;
+        const calculateDailyBalance = (dKey: string, date: Date) => {
+            const isFuture = dKey > todayKey;
+
+            if (isFuture) {
+                return { date, dKey, bmr, extra: 0, consumed: 0, balance: bmr, isFuture: true, isFinished: false };
+            }
 
             const isDayClosed = closedDays.has(dKey);
             const planMeals = plan.nutrition?.meals || [];
-
-            // If the plan has no meals, we can't judge completion except via "Close Day"
-            if (planMeals.length === 0 && !isDayClosed) {
-                return 0;
-            }
-
-            let effectiveBMR = 0;
             const currentMealIds = new Set(planMeals.map(m => m.id));
             const consumedThisDay = Array.from(consumedMeals).filter((k: any) => {
                 const key = String(k);
@@ -1364,15 +1368,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 return currentMealIds.has(mealId);
             });
 
-            // Strict check: day must be explicitly closed OR all current plan meals must be marked consumed
             const isAllMealsMarked = planMeals.length > 0 && consumedThisDay.length >= planMeals.length;
-
-            if (isDayClosed || isAllMealsMarked) {
-                effectiveBMR = bmr;
-            } else {
-                // User Requirement: Skip calculation if day is not finished/closed
-                return 0;
-            }
+            const isFinished = isDayClosed || isAllMealsMarked;
 
             const fitData = getGoogleFitDataForDate(dKey);
             const manualExtra = extraCalories[dKey];
@@ -1384,46 +1381,65 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
             if (manualExtra !== undefined) {
                 activeBurn = manualExtra;
             } else if (fitCals > 0) {
-                // Google Fit returns TOTAL calories (BMR + Active).
-                // We need ONLY active calories since we add BMR separately.
-                // Subtract BMR to get active portion only.
                 activeBurn = Math.max(0, fitCals - bmr);
             }
 
-            const totalBurned = effectiveBMR + activeBurn;
-            const balance = totalBurned - consumedCals;
+            const balance = (bmr + activeBurn) - consumedCals;
 
-            // Consistency check: only positive balance contributes to the weight loss "stored deficit"
-            return Math.max(0, balance);
+            if (isFinished) {
+                totalBalance += balance;
+                activeDays++;
+            }
+
+            return {
+                date,
+                dKey,
+                bmr,
+                extra: activeBurn,
+                consumed: consumedCals,
+                balance: Math.round(balance),
+                isFuture: false,
+                isFinished
+            };
         };
 
         if (deficitStartDate) {
-            // Forward Cycle: Sum TMB/Activity only for valid passed days
             const [y, m, d] = deficitStartDate.split('-').map(Number);
             const startDate = new Date(y, m - 1, d);
-
             for (let i = 0; i < 7; i++) {
                 const date = new Date(startDate);
                 date.setDate(startDate.getDate() + i);
                 const dKey = getDateKey(date);
-
-                // Only count up to today (inclusive)
-                if (dKey > todayKey) continue;
-
-                totalBalance += calculateDailyBalance(dKey);
+                dayResults.push(calculateDailyBalance(dKey, date));
             }
         } else {
-            // Standard: Last 7 days
-            for (let i = 0; i < 7; i++) {
+            // Last 7 days, reverse sorted (past to present)
+            for (let i = 6; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(today.getDate() - i);
                 const dKey = getDateKey(date);
-
-                totalBalance += calculateDailyBalance(dKey);
+                dayResults.push(calculateDailyBalance(dKey, date));
             }
         }
 
-        return Math.round(totalBalance);
+        const avg = activeDays > 0 ? totalBalance / activeDays : 0;
+        const target = 7700;
+        const remaining = target - totalBalance;
+
+        let daysToGoal = 0;
+        if (avg > 0) {
+            daysToGoal = Math.ceil(remaining / avg);
+        } else {
+            daysToGoal = 99;
+        }
+
+        return {
+            total: Math.round(totalBalance),
+            average: Math.round(avg),
+            daysRemaining: Math.max(0, daysToGoal),
+            activeDays,
+            days: dayResults
+        };
     };
 
     const selectedDayPlannedCalories = getCaloriesForDate(selectedDateKey, false);
@@ -2680,65 +2696,8 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     const renderDeficitBreakdownModal = () => {
         if (!isDeficitBreakdownOpen) return null;
 
-        const bmr = calculateBMR();
-        const today = new Date();
-        const todayKey = getDateKey(today);
-        const days = [];
-
-        if (deficitStartDate) {
-            // Forward cycle: Start Date + 6 days
-            const [y, m, d] = deficitStartDate.split('-').map(Number);
-            const startDate = new Date(y, m - 1, d);
-
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                const dKey = getDateKey(date);
-
-                const isFuture = dKey > todayKey;
-
-                if (isFuture) {
-                    days.push({ date, dKey, bmr, extra: 0, consumed: 0, balance: bmr, isFuture: true });
-                } else {
-                    const fitData = getGoogleFitDataForDate(dKey);
-                    const consumed = getCaloriesForDate(dKey, true);
-                    const manualExtra = extraCalories[dKey];
-                    const totalFit = fitData.calories_burned || 0;
-
-                    let extra = 0;
-                    if (manualExtra !== undefined) {
-                        extra = manualExtra;
-                    } else if (totalFit > 0) {
-                        extra = Math.max(0, totalFit - bmr);
-                    }
-
-                    const balance = (bmr + extra) - consumed;
-                    days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
-                }
-            }
-        } else {
-            // Standard: Last 7 days
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
-                const dKey = getDateKey(date);
-
-                const fitData = getGoogleFitDataForDate(dKey);
-                const consumed = getCaloriesForDate(dKey, true);
-                const manualExtra = extraCalories[dKey];
-                const totalFit = fitData.calories_burned || 0;
-
-                let extra = 0;
-                if (manualExtra !== undefined) {
-                    extra = manualExtra;
-                } else if (totalFit > 0) {
-                    extra = totalFit;
-                }
-
-                const balance = (bmr + extra) - consumed;
-                days.push({ date, dKey, bmr, extra, consumed, balance, isFuture: false });
-            }
-        }
+        const todayKey = getDateKey(new Date());
+        const days = weeklyDeficit.days;
 
         return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
@@ -2752,14 +2711,44 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         </button>
                         <h2 className="text-xl font-black flex items-center gap-2">
                             <TrendingUp className="w-6 h-6" />
-                            Resumo de Déficit
+                            Projeção de 1kg
                         </h2>
                         <p className="text-brand-100 dark:text-brand-200 text-sm mt-1">
                             {deficitStartDate
                                 ? `Ciclo de 7 dias (Início: ${new Date(Number(deficitStartDate.split('-')[0]), Number(deficitStartDate.split('-')[1]) - 1, Number(deficitStartDate.split('-')[2])).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })})`
-                                : "Últimos 7 dias acumulados"
+                                : "Acompanhamento de Déficit"
                             }
                         </p>
+                        <div className="mt-4 flex gap-4">
+                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                                <p className="text-[10px] text-brand-100 font-bold uppercase">Meta -1kg</p>
+                                <p className="text-sm font-black">7.700 kcal</p>
+                            </div>
+                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                                <p className="text-[10px] text-brand-100 font-bold uppercase">Média Diária</p>
+                                <p className="text-sm font-black">{weeklyDeficit.average} kcal</p>
+                            </div>
+                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                                <p className="text-[10px] text-brand-100 font-bold uppercase">Faltam</p>
+                                <p className="text-sm font-black">{Math.max(0, 7700 - weeklyDeficit.total)} kcal</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 border-b border-blue-100 dark:border-blue-900/30">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-blue-600 text-white p-2 rounded-xl">
+                                <Clock className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-blue-700 dark:text-blue-400">Previsão de Emagrecimento</p>
+                                <p className="text-lg font-black text-gray-900 dark:text-white">
+                                    {weeklyDeficit.average > 0
+                                        ? `Em ${weeklyDeficit.daysRemaining} dias você perde 1kg`
+                                        : "Déficit insuficiente para estimar"}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="p-4 max-h-[60vh] overflow-y-auto">
@@ -2773,10 +2762,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                                                     {day.date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}
                                                     {day.dKey === todayKey && " (Hoje)"}
                                                 </h3>
-                                                {day.isFuture && <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projeção (TMB)</span>}
+                                                {day.isFuture ? (
+                                                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projeção (TMB)</span>
+                                                ) : !day.isFinished && (
+                                                    <span className="text-[9px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-wide">Pendente (Não somado)</span>
+                                                )}
                                             </div>
-                                            <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${day.balance >= 0 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}`}>
-                                                {day.balance >= 0 ? `+${day.balance} kcal` : `${day.balance} kcal`}
+                                            <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${!day.isFinished && !day.isFuture ? 'bg-gray-100 dark:bg-gray-800 text-gray-400' : day.balance >= 0 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}`}>
+                                                {day.isFinished || day.isFuture ? (day.balance >= 0 ? `+${day.balance} kcal` : `${day.balance} kcal`) : "--- kcal"}
                                             </div>
                                         </div>
 
@@ -2810,12 +2803,12 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         <div className="flex justify-between items-center mb-4">
                             <div>
                                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Saldo Semanal</p>
-                                <p className="text-2xl font-black text-brand-600 dark:text-brand-400">{weeklyDeficit} kcal</p>
+                                <p className="text-2xl font-black text-brand-600 dark:text-brand-400">{weeklyDeficit.total} kcal</p>
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Queima Estimada</p>
                                 <p className="text-lg font-black text-gray-800 dark:text-white">
-                                    {(weeklyDeficit / 7700).toFixed(2)} kg
+                                    {(weeklyDeficit.total / 7700).toFixed(2)} kg
                                 </p>
                             </div>
                         </div>
@@ -2842,14 +2835,14 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         {(() => {
                             const todayData = getGoogleFitDataForDate(todayKey);
                             const bmr = calculateBMR();
-                            // Google Fit data here apparently represents Active Calories (historically ~500kcal, less than BMR)
-                            const googleFitActive = todayData.calories_burned || 0;
+                            // Google Fit returns TOTAL calories (BMR + Active)
+                            const googleFitTotal = todayData.calories_burned || 0;
+
+                            // Calculate active calories only: Google Fit Total - BMR
+                            const activeCalories = Math.max(0, googleFitTotal - bmr);
 
                             // Calculate Total Expended: BMR + Active from Google Fit
-                            const totalExpended = bmr + googleFitActive;
-
-                            // Active portion is just the Google Fit data
-                            const activeCalories = googleFitActive;
+                            const totalExpended = bmr + activeCalories;
 
                             const stepsGoal = 10000;
                             const stepsProgress = Math.min((todayData.steps / stepsGoal) * 100, 100);
@@ -2923,64 +2916,89 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         </button>
                     </div>
 
-                    <div className="flex justify-around items-center">
-
-                        <div className="relative">
-                            <ModernGauge
-                                value={displayConsumedCalories}
-                                max={customTargets.calories}
-                                type="calories"
-                                label={selectedDateKey === todayKey ? "Calorias (Hoje)" : "Calorias (Dia)"}
-                                suffix="kcal"
-                                icon={<Flame className="w-5 h-5 text-orange-500" />}
-                            />
-                            <button
-                                onClick={() => setIsGoalsModalOpen(true)}
-                                className="absolute top-2 right-2 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-800/50 text-orange-600 dark:text-orange-400 p-1.5 rounded-lg transition-colors"
-                                title="Editar metas de nutrição"
-                            >
-                                <Settings2 className="w-3.5 h-3.5" />
-                            </button>
+                    {/* Unified Gauge Row */}
+                    <div className="flex flex-col items-center">
+                        {/* BMR Info Display - Shared header to ensure gauges align vertically */}
+                        <div
+                            onClick={() => setIsBMRCalculationModalOpen(true)}
+                            className="mb-6 text-center cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 p-3 px-6 rounded-2xl border border-dashed border-orange-200 dark:border-orange-900/40 transition-all group"
+                        >
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Configuração da Meta</p>
+                                <Info className="w-3.5 h-3.5 text-orange-400 group-hover:text-orange-500 transition-colors" />
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <p className="text-sm font-black text-orange-600 dark:text-orange-400">
+                                    {(() => {
+                                        const currentTarget = plan.nutrition?.targetCalories || customTargets.calories;
+                                        return `Meta Diária: ${currentTarget} kcal`;
+                                    })()}
+                                </p>
+                                <div className="h-4 w-[1px] bg-orange-200 dark:bg-orange-900/40" />
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase">Clique para ver o cálculo</p>
+                            </div>
                         </div>
 
-                        <div className="relative group">
-                            <div
-                                onClick={() => setIsDeficitBreakdownOpen(true)}
-                                className="cursor-pointer transition-transform hover:scale-[1.02]"
-                            >
+                        <div className="flex flex-col sm:flex-row justify-center items-start gap-12 sm:gap-24">
+
+                            <div className="relative pt-2">
+
                                 <ModernGauge
-                                    value={Math.max(0, 7700 - Math.max(0, weeklyDeficit))}
-                                    max={7700}
-                                    type="deficit"
-                                    label="Falta para 1kg"
+                                    value={displayConsumedCalories}
+                                    max={plan.nutrition?.targetCalories || customTargets.calories}
+                                    type="calories"
+                                    label={selectedDateKey === todayKey ? "Calorias (Hoje)" : "Calorias (Dia)"}
                                     suffix="kcal"
-                                    icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
+                                    icon={<Flame className="w-5 h-5 text-orange-500" />}
                                 />
+                                <button
+                                    onClick={() => setIsGoalsModalOpen(true)}
+                                    className="absolute -top-1 -right-1 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-800/50 text-orange-600 dark:text-orange-400 p-1.5 rounded-lg transition-colors shadow-sm"
+                                    title="Editar metas de nutrição"
+                                >
+                                    <Settings2 className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                            <div className="flex flex-col items-center">
-                                <div className="bg-blue-50 dark:bg-blue-900/30 text-[9px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50 flex items-center gap-1 mt-1">
-                                    Meta 1kg
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            alert("Cálculo Estimado:\n7.700 kcal acumuladas equivalem a aproximadamente 1kg de gordura corporal (Regra de Wishnofsky).\n\nEste valor é uma estimativa científica e pode variar dependendo do metabolismo individual, composição corporal e outros fatores biológicos.");
-                                        }}
-                                        className="hover:text-blue-800 dark:hover:text-blue-300"
-                                    >
-                                        <Info className="w-3 h-3" />
-                                    </button>
+
+                            <div className="relative pt-2 group">
+                                <div
+                                    onClick={() => setIsDeficitBreakdownOpen(true)}
+                                    className="cursor-pointer transition-transform hover:scale-[1.02]"
+                                >
+                                    <ModernGauge
+                                        value={weeklyDeficit.total}
+                                        max={7700}
+                                        type="deficit"
+                                        label="Dias para -1kg"
+                                        suffix={weeklyDeficit.daysRemaining > 90 ? "∞" : String(weeklyDeficit.daysRemaining)}
+                                        icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
+                                    />
                                 </div>
+                                <div className="flex flex-col items-center">
+                                    <div className="bg-blue-50 dark:bg-blue-900/30 text-[9px] font-bold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50 flex items-center gap-1 mt-1">
+                                        Meta 1kg
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                alert("Cálculo Estimado:\n7.700 kcal acumuladas equivalem a aproximadamente 1kg de gordura corporal (Regra de Wishnofsky).\n\nEste valor é uma estimativa científica e pode variar dependendo do metabolismo individual, composição corporal e outros fatores biológicos.");
+                                            }}
+                                            className="hover:text-blue-800 dark:hover:text-blue-300"
+                                        >
+                                            <Info className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsDeficitModalOpen(true);
+                                    }}
+                                    className="absolute -top-1 -right-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 p-1.5 rounded-lg transition-colors z-10 shadow-sm"
+                                    title="Editar meta de deficit"
+                                >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsDeficitModalOpen(true);
-                                }}
-                                className="absolute top-2 right-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 text-blue-600 dark:text-blue-400 p-1.5 rounded-lg transition-colors z-10"
-                                title="Editar meta de deficit"
-                            >
-                                <Edit3 className="w-3.5 h-3.5" />
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -4298,6 +4316,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                 <div className="w-full max-w-md mx-auto px-6 pb-6 pt-3 flex justify-between items-center">
                     {[
                         { id: 'overview', icon: LayoutDashboard, label: 'Resumo' },
+                        { id: 'calculator', icon: Calculator, label: 'Calculadora', action: () => setIsBMRCalculatorOpen(true) },
                         { id: 'workout', icon: Dumbbell, label: 'Treino' },
                         { id: 'diet', icon: Apple, label: 'Dieta' },
                         { id: 'progress', icon: TrendingUp, label: 'Evolução' },
@@ -4309,7 +4328,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
+                                onClick={() => tab.action ? tab.action() : setActiveTab(tab.id as any)}
                                 className={`flex flex-col items-center gap-1 transition-all duration-300 ${isActive ? 'text-brand-600 dark:text-brand-400 -translate-y-1' : 'text-gray-400 dark:text-gray-600'}`}
                             >
                                 <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-brand-50 dark:bg-brand-900/40' : 'bg-transparent'}`}>
@@ -5126,6 +5145,152 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                     </div>
                 </div>
             )}
+
+            {/* BMR CALCULATION MODAL */}
+            {isBMRCalculationModalOpen && (() => {
+                const bmr = calculateBMR();
+                const gender = (user.gender?.toString().toLowerCase() === 'male' || user.gender?.toString().toLowerCase() === 'masculino' || user.gender?.toString().toLowerCase() === 'gender.male') ? 'Masculino' : 'Feminino';
+                const targetCals = plan.nutrition?.targetCalories || customTargets.calories;
+                const deficit = targetCals - bmr;
+                const activityFactor = user.activityLevel === 'Sedentário' ? 1.2 :
+                    user.activityLevel === 'Levemente ativo' ? 1.375 :
+                        user.activityLevel === 'Moderadamente ativo' ? 1.55 :
+                            user.activityLevel === 'Muito ativo' ? 1.725 : 1.9;
+                const tdee = Math.round(bmr * activityFactor);
+
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800 max-h-[90vh] overflow-y-auto">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-800 dark:text-white">Cálculo da Meta Calórica</h3>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Fórmula de Mifflin-St Jeor</p>
+                                </div>
+                                <button onClick={() => setIsBMRCalculationModalOpen(false)} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                    <X className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                </button>
+                            </div>
+
+                            {/* Dados do Usuário */}
+                            <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10 rounded-2xl p-4 mb-6 border border-orange-100 dark:border-orange-900/30">
+                                <h4 className="text-sm font-black text-orange-900 dark:text-orange-300 mb-3">📊 Seus Dados</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Peso</p>
+                                        <p className="text-lg font-black text-gray-800 dark:text-white">{user.weight} kg</p>
+                                    </div>
+                                    <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Altura</p>
+                                        <p className="text-lg font-black text-gray-800 dark:text-white">{user.height} cm</p>
+                                    </div>
+                                    <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Idade</p>
+                                        <p className="text-lg font-black text-gray-800 dark:text-white">{user.age} anos</p>
+                                    </div>
+                                    <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Sexo</p>
+                                        <p className="text-lg font-black text-gray-800 dark:text-white">{gender}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cálculo BMR */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 mb-6 border border-blue-100 dark:border-blue-900/30">
+                                <h4 className="text-sm font-black text-blue-900 dark:text-blue-300 mb-3">🧮 Cálculo do Gasto Basal (BMR)</h4>
+                                <div className="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg mb-3">
+                                    <p className="font-bold text-blue-600 dark:text-blue-400 mb-2">Fórmula:</p>
+                                    <p>BMR = (10 × peso) + (6.25 × altura) - (5 × idade) {gender === 'Masculino' ? '+ 5' : '- 161'}</p>
+                                    <p className="mt-2 text-gray-500 dark:text-gray-400">Substituindo:</p>
+                                    <p className="mt-1">= (10 × {user.weight}) + (6.25 × {user.height}) - (5 × {user.age}) {gender === 'Masculino' ? '+ 5' : '- 161'}</p>
+                                    <p className="mt-1">= {10 * user.weight} + {6.25 * user.height} - {5 * user.age} {gender === 'Masculino' ? '+ 5' : '- 161'}</p>
+                                    <p className="mt-3 font-bold text-blue-600 dark:text-blue-400 text-base">= {bmr} kcal/dia</p>
+                                </div>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">Este é o gasto calórico do seu corpo em repouso (respiração, circulação, funções celulares).</p>
+                            </div>
+
+                            {/* TDEE */}
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 mb-6 border border-purple-100 dark:border-purple-900/30">
+                                <h4 className="text-sm font-black text-purple-900 dark:text-purple-300 mb-3">⚡ Gasto Total Diário (TDEE)</h4>
+                                <div className="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg mb-3">
+                                    <p className="font-bold text-purple-600 dark:text-purple-400 mb-2">Cálculo:</p>
+                                    <p>TDEE = BMR × Fator de Atividade</p>
+                                    <p className="mt-1">= {bmr} × {activityFactor} <span className="text-gray-500 dark:text-gray-400">({user.activityLevel})</span></p>
+                                    <p className="mt-3 font-bold text-purple-600 dark:text-purple-400 text-base">= {tdee} kcal/dia</p>
+                                </div>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">Gasto total incluindo atividades diárias e exercícios.</p>
+                            </div>
+
+                            {/* Meta Final */}
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/10 rounded-2xl p-4 border border-green-100 dark:border-green-900/30">
+                                <h4 className="text-sm font-black text-green-900 dark:text-green-300 mb-3">🎯 Meta Calórica para {user.goal === 'Perda de peso' ? 'Emagrecimento' : 'Ganho de Massa'}</h4>
+                                <div className="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg mb-3">
+                                    <p className="font-bold text-green-600 dark:text-green-400 mb-2">Cálculo:</p>
+                                    <p>Meta = TDEE {targetCals < tdee ? '-' : '+'} {Math.abs(targetCals - tdee)} kcal</p>
+                                    <p className="mt-1">= {tdee} {targetCals < tdee ? '-' : '+'} {Math.abs(targetCals - tdee)}</p>
+                                    <p className="mt-3 font-bold text-green-600 dark:text-green-400 text-lg">= {targetCals} kcal/dia</p>
+                                </div>
+                                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3 mt-3">
+                                    <p className="text-[10px] text-amber-800 dark:text-amber-300 font-bold">💡 Dica:</p>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                                        {targetCals < tdee
+                                            ? `Um déficit de ${tdee - targetCals} kcal/dia pode resultar em aproximadamente ${((tdee - targetCals) * 7 / 7700).toFixed(2)}kg de perda por semana.`
+                                            : `Com um superávit de ${targetCals - tdee} kcal/dia, você está consumindo mais do que gasta, o que é ideal para o ganho de massa/peso.`
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* BMR CALCULATOR */}
+            <BMRCalculator
+                isOpen={isBMRCalculatorOpen}
+                onClose={() => setIsBMRCalculatorOpen(false)}
+                onGeneratePlan={async (userData) => {
+                    // Convert calculator data to UserProfile format
+                    const newProfile: UserProfile = {
+                        name: user.name || 'Usuário',
+                        age: userData.age,
+                        weight: userData.weight,
+                        height: userData.height,
+                        gender: userData.gender === 'male' ? Gender.Male : Gender.Female,
+                        activityLevel: userData.activityLevel as any,
+                        goal: userData.goal as any,
+                        foodRestrictions: user.foodRestrictions || [],
+                        experienceLevel: user.experienceLevel || 'Iniciante',
+                        workoutFrequency: user.workoutFrequency || 3,
+                        workoutDays: user.workoutDays || [],
+                        foodPreferences: user.foodPreferences || {},
+                        targetDeficit: userData.targetDeficit
+                    };
+
+                    // Generate new plan
+                    try {
+                        const generatedPlan = await EdgeFunctionService.generatePlan(newProfile);
+                        onUpdatePlan(generatedPlan);
+
+                        // Update user profile
+                        localStorage.setItem('fitcoach_user', JSON.stringify(newProfile));
+                        localStorage.setItem('fitcoach_plan', JSON.stringify(generatedPlan));
+
+                        alert('Plano gerado com sucesso! A página será recarregada.');
+                        // Reload to update user profile in component
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('Error generating plan:', error);
+                        // Fallback to local generation
+                        const fallbackPlan = generatePlan(newProfile);
+                        onUpdatePlan(fallbackPlan);
+                        localStorage.setItem('fitcoach_user', JSON.stringify(newProfile));
+                        localStorage.setItem('fitcoach_plan', JSON.stringify(fallbackPlan));
+                        alert('Plano gerado com sucesso! A página será recarregada.');
+                        // Reload to update user profile in component
+                        window.location.reload();
+                    }
+                }}
+            />
 
             {/* CELEBRATION MESSAGE OVERLAY */}
             {showCelebrationMessage && (

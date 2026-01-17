@@ -46,6 +46,7 @@ export interface UserProfile {
   workoutSplit?: WorkoutSplit; // Opção escolhida pelo usuário
   foodPreferences: string[];
   foodRestrictions: string[];
+  targetDeficit?: number; // Valor manual de déficit (-) ou superávit (+)
 }
 
 export interface Ingredient {
