@@ -335,6 +335,27 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         // We cannot update user prop here, but localStorage is source of truth for next reload
     }, [foodPreferences]);
 
+    // Custom Food Database State (AI-analyzed foods)
+    const [customFoodDatabase, setCustomFoodDatabase] = useState<FoodItem[]>(() => {
+        const saved = localStorage.getItem('fitcoach_custom_foods');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    // Recent Foods State (last 10 foods added)
+    const [recentFoods, setRecentFoods] = useState<Array<{ food: FoodItem, timestamp: number }>>(() => {
+        const saved = localStorage.getItem('fitcoach_recent_foods');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_custom_foods', JSON.stringify(customFoodDatabase));
+    }, [customFoodDatabase]);
+
+    useEffect(() => {
+        localStorage.setItem('fitcoach_recent_foods', JSON.stringify(recentFoods));
+    }, [recentFoods]);
+
+
     // Camera Modal State
     const [isCameraOpen, setCameraOpen] = useState(false);
     const [cameraMode, setCameraMode] = useState<'log' | 'fruit'>('log'); // Novo estado para saber se é log de comida ou análise de fruta
@@ -1127,17 +1148,21 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
             // Replace existing foods with new analyzed foods (don't accumulate)
             const newMealLog = [];
             analysis.foods.forEach(food => {
-                newMealLog.push({
+                const foodItem: FoodItem = {
                     id: `analyzed-${Date.now()}-${Math.random()}`,
                     name: food.name,
                     calories: food.calories,
                     protein: food.protein,
                     carbs: food.carbs,
                     fats: food.fats,
-                    fiber: 0,
-                    quantity: food.portion,
-                    unit: 'porção'
-                });
+                    portion: food.portion,
+                    category: 'meal'
+                };
+
+                newMealLog.push(foodItem);
+
+                // Save to custom database for future searches
+                addFoodToCustomDatabase(foodItem);
             });
 
             return {
@@ -1247,6 +1272,33 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     };
 
     const removeAccents = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Helper function to add AI-analyzed food to custom database
+    const addFoodToCustomDatabase = (food: FoodItem) => {
+        // Check if food already exists (by name)
+        const exists = customFoodDatabase.some(f =>
+            f.name.toLowerCase() === food.name.toLowerCase()
+        );
+
+        if (!exists) {
+            // Generate unique ID if not present
+            const newFood = {
+                ...food,
+                id: food.id || `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                category: food.category || 'meal'
+            };
+
+            setCustomFoodDatabase(prev => [...prev, newFood]);
+
+            // Add to recent foods
+            setRecentFoods(prev => {
+                const updated = [{ food: newFood, timestamp: Date.now() }, ...prev];
+                // Keep only last 10
+                return updated.slice(0, 10);
+            });
+        }
+    };
+
 
     const filteredExercises = useMemo(() => {
         let list = exerciseDatabase;
@@ -2042,10 +2094,13 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
     };
 
     const filteredFoods = useMemo(() => {
-        if (!foodSearchTerm) return foodDatabase;
+        // Merge static and custom food databases
+        const allFoods = [...foodDatabase, ...customFoodDatabase];
+
+        if (!foodSearchTerm) return allFoods;
         const lower = removeAccents(foodSearchTerm.toLowerCase());
-        return foodDatabase.filter(f => removeAccents(f.name.toLowerCase()).includes(lower));
-    }, [foodSearchTerm]);
+        return allFoods.filter(f => removeAccents(f.name.toLowerCase()).includes(lower));
+    }, [foodSearchTerm, customFoodDatabase]);
 
     // --- SHOPPING LIST CALCULATOR & PARSER ---
 
@@ -2700,12 +2755,18 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
         const days = weeklyDeficit.days;
 
         return (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-transparent dark:border-gray-800 shadow-2xl">
-                    <div className="bg-brand-600 dark:bg-brand-500 p-6 text-white relative">
+            <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                style={{ height: '100dvh' }}
+            >
+                <div
+                    className="bg-white dark:bg-gray-900 rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-lg flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 border border-transparent dark:border-gray-800 shadow-2xl"
+                    style={{ maxHeight: '82dvh' }}
+                >
+                    <div className="bg-brand-600 dark:bg-brand-500 p-6 sm:p-6 text-white relative shrink-0">
                         <button
                             onClick={() => setIsDeficitBreakdownOpen(false)}
-                            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+                            className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -2719,23 +2780,23 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                                 : "Acompanhamento de Déficit"
                             }
                         </p>
-                        <div className="mt-4 flex gap-4">
-                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                        <div className="mt-4 grid grid-cols-2 xs:grid-cols-3 gap-2 sm:gap-4">
+                            <div className="bg-white/10 rounded-xl p-2 flex flex-col justify-center">
                                 <p className="text-[10px] text-brand-100 font-bold uppercase">Meta -1kg</p>
                                 <p className="text-sm font-black">7.700 kcal</p>
                             </div>
-                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                            <div className="bg-white/10 rounded-xl p-2 flex flex-col justify-center">
                                 <p className="text-[10px] text-brand-100 font-bold uppercase">Média Diária</p>
                                 <p className="text-sm font-black">{weeklyDeficit.average} kcal</p>
                             </div>
-                            <div className="bg-white/10 rounded-xl p-2 flex-1">
+                            <div className="bg-white/10 rounded-xl p-2 flex flex-col justify-center col-span-2 xs:col-span-1">
                                 <p className="text-[10px] text-brand-100 font-bold uppercase">Faltam</p>
                                 <p className="text-sm font-black">{Math.max(0, 7700 - weeklyDeficit.total)} kcal</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 border-b border-blue-100 dark:border-blue-900/30">
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 border-b border-blue-100 dark:border-blue-900/30 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="bg-blue-600 text-white p-2 rounded-xl">
                                 <Clock className="w-5 h-5" />
@@ -2751,7 +2812,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         </div>
                     </div>
 
-                    <div className="p-4 max-h-[60vh] overflow-y-auto">
+                    <div className="p-4 flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-900">
                         <div className="space-y-3">
                             {days.map((day, idx) => {
                                 return (
@@ -2799,7 +2860,10 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                         </div>
                     </div>
 
-                    <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+                    <div
+                        className="p-6 sm:p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 shrink-0"
+                        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 24px) + 24px)' }}
+                    >
                         <div className="flex justify-between items-center mb-4">
                             <div>
                                 <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">Saldo Semanal</p>
@@ -4349,18 +4413,7 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                     <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border border-transparent dark:border-gray-800">
                         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
                             <h3 className="font-bold text-lg text-gray-900 dark:text-white">Adicionar Alimento</h3>
-                            <div className="flex items-center gap-2">
-                                {currentMealIdForAdd && (
-                                    <button
-                                        onClick={() => startCamera(currentMealIdForAdd, 'log')}
-                                        className="p-2 bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 rounded-full hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors"
-                                        title="Analisar foto do alimento"
-                                    >
-                                        <Camera className="w-5 h-5" />
-                                    </button>
-                                )}
-                                <button onClick={() => setFoodModalOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
-                            </div>
+                            <button onClick={() => setFoodModalOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
                         </div>
 
                         {/* Meal Selector inside Modal if none selected or for change */}
@@ -4404,11 +4457,53 @@ export const Dashboard: React.FC<Props> = ({ userId, plan, user, isDarkMode, onT
                                             placeholder="Buscar alimento (ex: Arroz, Frango)..."
                                             value={foodSearchTerm}
                                             onChange={(e) => setFoodSearchTerm(e.target.value)}
-                                            className="w-full pl-10 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 focus:border-brand-500 dark:focus:border-brand-400 outline-none text-gray-900 dark:text-white"
+                                            className="w-full pl-10 pr-14 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-brand-500 dark:focus:ring-brand-400 focus:border-brand-500 dark:focus:border-brand-400 outline-none text-gray-900 dark:text-white"
                                             autoFocus
                                         />
+                                        {currentMealIdForAdd && (
+                                            <button
+                                                onClick={() => startCamera(currentMealIdForAdd, 'log')}
+                                                className="absolute right-2 top-2 p-2 bg-gradient-to-br from-brand-500 to-brand-600 dark:from-brand-600 dark:to-brand-700 text-white rounded-lg hover:from-brand-600 hover:to-brand-700 dark:hover:from-brand-700 dark:hover:to-brand-800 transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+                                                title="🤖 Analisar com IA"
+                                            >
+                                                <Camera className="w-5 h-5" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* Recent Foods Section */}
+                                {!foodSearchTerm && recentFoods.length > 0 && (
+                                    <div className="px-4 pb-3">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Sparkles className="w-4 h-4 text-brand-500 dark:text-brand-400" />
+                                            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Recentes (IA)</h4>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {recentFoods.slice(0, 5).map((recent, idx) => (
+                                                <button
+                                                    key={`${recent.food.id}-${recent.timestamp}`}
+                                                    onClick={() => handleAddFood(recent.food)}
+                                                    className="w-full flex items-center justify-between p-2.5 bg-gradient-to-r from-brand-50 to-purple-50 dark:from-brand-900/20 dark:to-purple-900/20 border border-brand-100 dark:border-brand-800/30 rounded-lg hover:from-brand-100 hover:to-purple-100 dark:hover:from-brand-900/30 dark:hover:to-purple-900/30 transition-all group"
+                                                >
+                                                    <div className="flex-1 text-left">
+                                                        <div className="font-bold text-sm text-gray-900 dark:text-white">{recent.food.name}</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {recent.food.calories} kcal • {recent.food.portion}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold bg-brand-100 dark:bg-brand-900/40 px-2 py-0.5 rounded-full">
+                                                            IA
+                                                        </span>
+                                                        <PlusCircle className="w-5 h-5 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform" />
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex-1 overflow-y-auto p-4 pt-0 space-y-2">
                                     {filteredFoods.map(food => (
                                         <button
