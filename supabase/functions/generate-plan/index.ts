@@ -19,6 +19,43 @@ serve(async (req) => {
     const { userProfile, imageData } = await req.json()
     const genAI = new GoogleGenerativeAI(apiKey)
 
+    // Calculate nutrition values locally to ensure accuracy
+    // BMR calculation using Mifflin-St Jeor equation
+    let bmr = (10 * userProfile.weight) + (6.25 * userProfile.height) - (5 * userProfile.age)
+    if (userProfile.gender === 'MALE' || userProfile.gender === 'Male') {
+      bmr += 5
+    } else {
+      bmr -= 161
+    }
+    bmr = Math.round(bmr)
+
+    // TDEE calculation based on activity level
+    const activityMultipliers: Record<string, number> = {
+      'SEDENTARY': 1.2,
+      'LIGHTLY_ACTIVE': 1.375,
+      'MODERATELY_ACTIVE': 1.55,
+      'VERY_ACTIVE': 1.725,
+      'SUPER_ACTIVE': 1.9
+    }
+    const multiplier = activityMultipliers[userProfile.activityLevel] || 1.2
+    const tdee = Math.round(bmr * multiplier)
+
+    // Target calories with deficit/surplus
+    let targetCalories = tdee
+    if (userProfile.targetDeficit !== undefined) {
+      targetCalories = tdee + userProfile.targetDeficit
+    } else if (userProfile.goal === 'WEIGHT_LOSS') {
+      targetCalories -= 500
+    } else {
+      targetCalories += 300
+    }
+
+    // Minimum calorie floors
+    if (userProfile.gender === 'FEMALE' && targetCalories < 1200) targetCalories = 1200
+    if (userProfile.gender === 'MALE' && targetCalories < 1500) targetCalories = 1500
+
+    const waterIntake = Math.round(userProfile.weight * 35)
+
     // Use stable model for best results
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" })
 
@@ -32,9 +69,17 @@ serve(async (req) => {
       - Objetivo: ${userProfile.goal === 'WEIGHT_LOSS' ? 'Emagrecimento' : 'Ganho de Massa'}
       - Peso: ${userProfile.weight}kg | Altura: ${userProfile.height}cm
       - Nível de Atividade: ${userProfile.activityLevel}
-      ${userProfile.targetDeficit ? `- Meta de Déficit/Superávit: ${userProfile.targetDeficit} kcal (USE EXATAMENTE ESSE VALOR PARA CALCULAR A META FINAL)` : ''}
       - Preferências: ${userProfile.foodPreferences?.join(', ') || 'Nenhuma'}
       - Restrições: ${userProfile.foodRestrictions?.join(', ') || 'Nenhuma'}
+
+      VALORES NUTRICIONAIS CALCULADOS (USE EXATAMENTE ESTES):
+      - BMR (Taxa Metabólica Basal): ${bmr} kcal
+      - TDEE (Gasto Energético Total): ${tdee} kcal
+      - META CALÓRICA DIÁRIA: ${targetCalories} kcal
+      - Ingestão de Água: ${waterIntake}ml
+
+      ⚠️ IMPORTANTE: Use EXATAMENTE ${targetCalories} kcal como "targetCalories" no JSON.
+      NÃO recalcule estes valores. Apenas distribua as calorias entre as 4 refeições.
 
       REQUISITOS TÉCNICOS:
       1. DIETA: Forneça Exatamente 4 refeições diárias (Café, Almoço, Lanche, Jantar).
@@ -49,10 +94,10 @@ serve(async (req) => {
       RESPONDA APENAS EM JSON PURO seguindo exatamente esta estrutura:
       {
         "nutrition": {
-          "targetCalories": 2000,
-          "bmr": 1800,
-          "tdee": 2400,
-          "waterIntake": 3000,
+          "targetCalories": ${targetCalories},
+          "bmr": ${bmr},
+          "tdee": ${tdee},
+          "waterIntake": ${waterIntake},
           "meals": [
             {
               "id": "1",

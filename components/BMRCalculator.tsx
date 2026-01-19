@@ -28,6 +28,17 @@ export function BMRCalculator({ isOpen, onClose, onGeneratePlan }: BMRCalculator
         targetDeficit: -500 // Padrão inicial
     });
 
+    // Update targetDeficit when goal changes
+    const handleGoalChange = (newGoal: string) => {
+        let newDeficit = 0;
+        if (newGoal === 'Perda de peso') {
+            newDeficit = -500; // Default deficit for weight loss
+        } else if (newGoal === 'Ganho de massa') {
+            newDeficit = 300; // Default surplus for muscle gain
+        }
+        setFormData({ ...formData, goal: newGoal, targetDeficit: newDeficit });
+    };
+
     const [showResults, setShowResults] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -191,7 +202,7 @@ export function BMRCalculator({ isOpen, onClose, onGeneratePlan }: BMRCalculator
                         <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase mb-2">Objetivo</label>
                         <select
                             value={formData.goal}
-                            onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+                            onChange={(e) => handleGoalChange(e.target.value)}
                             className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm font-bold text-gray-900 dark:text-white"
                         >
                             <option value="Perda de peso">Perda de peso</option>
@@ -212,17 +223,35 @@ export function BMRCalculator({ isOpen, onClose, onGeneratePlan }: BMRCalculator
                         </div>
                         <input
                             type="range"
-                            min="-1000"
-                            max="1000"
+                            min={formData.goal === 'Perda de peso' ? -1000 : formData.goal === 'Ganho de massa' ? 0 : -500}
+                            max={formData.goal === 'Perda de peso' ? 0 : formData.goal === 'Ganho de massa' ? 1000 : 500}
                             step="50"
                             value={formData.targetDeficit}
                             onChange={(e) => setFormData({ ...formData, targetDeficit: parseInt(e.target.value) })}
                             className="w-full h-2 bg-brand-100 dark:bg-brand-900/50 rounded-lg appearance-none cursor-pointer accent-brand-600"
                         />
                         <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase">
-                            <span>-1000 (Agressivo)</span>
-                            <span>Manutenção (0)</span>
-                            <span>+1000 (Bulking)</span>
+                            {formData.goal === 'Perda de peso' && (
+                                <>
+                                    <span>-1000 (Agressivo)</span>
+                                    <span>-500 (Moderado)</span>
+                                    <span>0 (Manutenção)</span>
+                                </>
+                            )}
+                            {formData.goal === 'Ganho de massa' && (
+                                <>
+                                    <span>0 (Manutenção)</span>
+                                    <span>+500 (Moderado)</span>
+                                    <span>+1000 (Agressivo)</span>
+                                </>
+                            )}
+                            {formData.goal === 'Manutenção' && (
+                                <>
+                                    <span>-500</span>
+                                    <span>0 (Manutenção)</span>
+                                    <span>+500</span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
